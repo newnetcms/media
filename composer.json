@@ -1,0 +1,25 @@
+{
+    "name": "newnetcms/media",
+    "description": "Media",
+    "require": {
+        "intervention/image": "^2.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Newnet\\Media\\": "/src"
+        },
+        "files": [
+            "helpers/helpers.php"
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Newnet\\Media\\MediaServiceProvider"
+            ],
+            "aliases": {
+                "Img": "Newnet\\Media\\Facades\\Img"
+            }
+        }
+    }
+}

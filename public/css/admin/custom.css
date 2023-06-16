@@ -1,0 +1,10 @@
+.selectedImage .border {
+    border-color: #000 !important;
+}
+
+.selectedView {
+    color: blue;
+}
+.editImageSelected {
+    margin-bottom: 20px;
+}
