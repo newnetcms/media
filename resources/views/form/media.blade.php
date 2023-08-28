@@ -21,7 +21,7 @@
     </style>
 @endpush
 @if(isset($media_type) && $media_type == 'gallery')
-    @include('media::form.gallary')
+    @include('media::form.gallery')
 @else
     @include('media::form.file')
 @endif

@@ -4,6 +4,7 @@ namespace Newnet\Media\Traits;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Newnet\Media\Facades\Img;
 use Newnet\Media\Jobs\PerformConversions;
 use Newnet\Media\MediaGroup;
 use Newnet\Media\Models\Media;
@@ -115,7 +116,7 @@ trait HasMediaTrait
             return '';
         }
 
-        return $media->thumb;
+        return Img::url($media->getUrl(), 300, 300);
     }
 
     /**
