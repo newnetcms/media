@@ -81,7 +81,7 @@ class MediaController extends Controller
                     $validator = \Validator::make($fileArray, $rules);
                     if ($validator->fails()) {
                         DB::rollBack();
-                        return redirect()->back()->with('errors', $validator->errors()->getMessages());
+                        return redirect()->back()->with('errors', $validator->errors());
                     } else {
                         $media = $mediaUploader->setFile($file)->upload();
                     }

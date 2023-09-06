@@ -24,15 +24,6 @@
         </div>
         <form id="upload-form" enctype="multipart/form-data" action="{{route('media.admin.media.store')}}" method="POST">
             @csrf
-            @if (count($errors) > 0)
-                <div class="alert alert-danger">
-                    <ol>
-                        @foreach ($errors['image'] as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ol>
-                </div>
-            @endif
             <div class="card-body">
 
                 @include('media::admin.layouts.upload-image')
