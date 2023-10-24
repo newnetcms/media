@@ -12,6 +12,10 @@ if (!function_exists('get_media')) {
      */
     function get_media($mediaId)
     {
+        if ($mediaId instanceof \Newnet\Media\Models\Media) {
+            return $mediaId;
+        }
+
         if ($mediaId) {
             return app(MediaRepositoryInterface::class)->find($mediaId);
         }
