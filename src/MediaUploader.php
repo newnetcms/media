@@ -174,7 +174,12 @@ class MediaUploader
     {
         $tmpFilePath = tempnam(sys_get_temp_dir(), 'newnet_download_');
 
-        $content = Http::get($url)->body();
+        $res = Http::get($url);
+        if ($res->failed()) {
+            throw $res->toException();
+        }
+
+        $content = $res->body();
         \File::put($tmpFilePath, $content);
         $realName = $realName ?: basename($url);
         $name = pathinfo($realName, PATHINFO_FILENAME);
