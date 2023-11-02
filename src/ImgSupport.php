@@ -28,6 +28,10 @@ class ImgSupport
 
     public function url($file, $width, $height = null)
     {
+        if (!$file) {
+            return '';
+        }
+
         if (preg_match('/^http/', $file)) {
             if (parse_url($file, PHP_URL_HOST) == parse_url(url('/'), PHP_URL_HOST)) {
                 $file = ltrim(parse_url($file, PHP_URL_PATH), '/');
