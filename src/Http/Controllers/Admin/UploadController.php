@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Collection;
+use Newnet\Media\Facades\Img;
 use Newnet\Media\MediaUploader;
 use Newnet\Media\Resources\MediaResource;
 
@@ -65,7 +66,7 @@ class UploadController extends Controller
             'media-id' => $medias->first()->id,
             'name'     => $medias->first()->name,
             'link'     => $medias->first()->getUrl(),
-            'thumb'    => $medias->first()->thumb,
+            'thumb'    => Img::url($medias->first()->getUrl(), 300, 300),
         ]);
     }
 
@@ -75,7 +76,7 @@ class UploadController extends Controller
             'media-id' => $medias->first()->id,
             'name'     => $medias->first()->name,
             'link'     => $medias->first()->getUrl(),
-            'thumb'    => $medias->first()->thumb,
+            'thumb'    => Img::url($medias->first()->getUrl(), 300, 300),
         ]);
     }
 

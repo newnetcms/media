@@ -27,7 +27,6 @@ use Newnet\Core\Support\Traits\CacheableTrait;
  * @property-read mixed $thumb
  * @property-read string|null $type
  * @property-read mixed $url
- * @property-read \Newnet\Media\Models\MediaTag|null $mediaTags
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \Newnet\Media\Models\Mediable> $mediables
  * @property-read int|null $mediables_count
  * @method static \Illuminate\Database\Eloquent\Builder|Media newModelQuery()

@@ -21,7 +21,7 @@
     </style>
 @endpush
 @if(isset($media_type) && $media_type == 'gallery')
-    @include('media::form.gallary')
+    @include('media::form.gallery')
 @else
     @include('media::form.file')
 @endif
@@ -114,16 +114,18 @@
             }
 
             $('.js-click-modal-media-{{$name}}').click(function () {
-                $.ajax({
-                    url: '{{ route('media.admin.media.ajaxMedia') }}',
-                    type: 'GET',
-                    success: function (res) {
-                        $('.js-modal-html-{{$name}}').append(res.result)
-                    },
-                    error: function (err) {
+                if (paginate == 1 && !$('.js-modal-html-{{$name}}').html()) {
+                    $.ajax({
+                        url: '{{ route('media.admin.media.ajaxMedia') }}',
+                        type: 'GET',
+                        success: function (res) {
+                            $('.js-modal-html-{{$name}}').append(res.result)
+                        },
+                        error: function (err) {
 
-                    }
-                })
+                        }
+                    })
+                }
             })
 
             $('#image-upload-{{$name}}').change(function () {

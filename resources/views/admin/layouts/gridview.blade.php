@@ -6,7 +6,7 @@
                     $type = explode('/', $media->mime_type)
                 @endphp
                 @if ($type[0] == 'image')
-                    <img width="130px" height="130px" style="padding: 15px;" src="{{ $media->thumb }}">
+                    <img width="130px" height="130px" style="padding: 15px;" src="{{ Img::url($media->getUrl(), 300, 300) }}">
                 @elseif ($type[0] == 'audio')
                     <img width="130px" height="130px" style="padding: 15px;" src="{{ asset('vendor/media/images/types/mp3.png') }}">
                 @elseif ($type[0] == 'video')

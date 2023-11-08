@@ -3,11 +3,12 @@
     <div class="col-12">
         <div class="group-validate gallery-form-group @error(get_dot_array_form($name)) is-invalid @enderror">
             <div class="gallery-list gallery-list-{{$name}}">
-                @if(($listMedia = object_get($item, get_dot_array_form($name))) && $listMedia instanceof \Illuminate\Support\Collection && is_numeric($listMedia->first()))
+                <input type="hidden" name="{{ $name }}">
+            @if(($listMedia = object_get($item, get_dot_array_form($name))) && $listMedia instanceof \Illuminate\Support\Collection && is_numeric($listMedia->first()))
                     @foreach($listMedia as $mediaId)
                         @if($media = get_media($mediaId))
                             <div class="gallery-item">
-                                <img src="{{ $media->thumb }}" alt="Image">
+                                <img src="{{ Img::url($media->getUrl(), 300, 300) }}" alt="Image">
                                 <input type="hidden" name="{{ $name }}[]" value="{{ $media->id }}">
                                 <a href="#" class="remove-media" title="Delete Image"><i class="fas fa-times-circle"></i></a>
                             </div>
@@ -16,10 +17,20 @@
                 @elseif($item && method_exists($item, 'getMedia') && $item->hasMedia($name))
                     @foreach($item->getMedia($name) as $media)
                         <div class="gallery-item">
-                            <img src="{{ $media->thumb }}" alt="Image">
+                            <img src="{{ Img::url($media->getUrl(), 300, 300) }}" alt="Image">
                             <input type="hidden" name="{{ $name }}[]" value="{{ $media->id }}">
                             <a href="#" class="remove-media" title="Delete Image"><i class="fas fa-times-circle"></i></a>
                         </div>
+                    @endforeach
+                @elseif(($listMedia = object_get($item, get_dot_array_form($name))) && is_array($listMedia))
+                    @foreach($listMedia as $mediaId)
+                        @if($media = get_media($mediaId))
+                            <div class="gallery-item" data-alt="{{ object_get($media, 'mediaTags.label') }}">
+                                <img src="{{ Img::url($media->getUrl(), 300, 300) }}" alt="Image">
+                                <input type="hidden" name="{{ $name }}[]" value="{{ $media->id }}">
+                                <a href="#" class="remove-media" title="Delete Image"><i class="fas fa-times-circle"></i></a>
+                            </div>
+                        @endif
                     @endforeach
                 @endif
             </div>

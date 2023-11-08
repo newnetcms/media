@@ -1,6 +1,5 @@
 <?php
 
-use Newnet\Media\Http\Controllers\Admin\MediaTagController;
 use Newnet\Media\Http\Controllers\Admin\UploadController;
 use Newnet\Media\Http\Controllers\Admin\MediaController;
 
@@ -12,10 +11,6 @@ Route::name('media.admin.')
 
 Route::post('media/upload', UploadController::class)
     ->name('media.admin.upload')
-    ->middleware('admin.can:media.admin.media.create');
-
-Route::post('media/media-tag', MediaTagController::class)
-    ->name('media.admin.media-tag')
     ->middleware('admin.can:media.admin.media.create');
 
 Route::prefix('media')->group(function () {
