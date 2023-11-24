@@ -31,6 +31,49 @@ class CropImageController extends Controller
             ]);
     }
 
+    public function webp($size, $file_path, $file_name)
+    {
+        $file = base64_decode($file_path);
+
+        if ($this->detectInternalImage($file)) {
+            $image = Image::make($file);
+
+            $cropedPath = $this->getWebpPath($size, $file_path, $file_name);
+
+            list($width, $height, $quality) = $this->getImageSizeOptions($size);
+
+            if ($width && $height) {
+                $image->fit($width, $height, function (Constraint $constraint) {
+                    $constraint->upsize();
+                })->save($cropedPath, null, 'webp');
+            } else {
+                $image->resize($width, $height, function (Constraint $constraint) {
+                    $constraint->upsize();
+                    $constraint->aspectRatio();
+                })->save($cropedPath, null, 'webp');
+            }
+
+            return $image->response();
+        }
+
+        return response('data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==')
+            ->withHeaders([
+                'Content-Type' => 'image/webp'
+            ]);
+    }
+
+    protected function getWebpPath($size, $file_path, $file_name): string
+    {
+        $cropedPath = "images/webp/{$size}/{$file_path}/{$file_name}";
+        $folder = dirname($cropedPath);
+
+        if (!File::isDirectory($folder)) {
+            File::makeDirectory($folder, 0755, true);
+        }
+
+        return $cropedPath;
+    }
+
     protected function getCropedPath($file, $size): string
     {
         $cropedPath = "images/size/{$size}/{$file}";

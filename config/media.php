@@ -50,5 +50,6 @@ return [
         'enable' => false,
         'server' => env('MEDIA_IMAGEPROXY_SERVER', 'https://img.cdn2n.net'),
         'quality' => 80,
-    ]
+    ],
+    'enable_webp' => env('MEDIA_ENABLED_WEBP', true),
 ];
