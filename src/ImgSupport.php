@@ -46,7 +46,8 @@ class ImgSupport
             $size .= 'h'.$height;
         }
 
-        if (config('cms.media.enable_webp')) {
+        $supportWebp = in_array('image/webp', request()->getAcceptableContentTypes());
+        if (config('cms.media.enable_webp') && $supportWebp) {
             $file_path = base64_encode($file);
             $file_name = pathinfo($file, PATHINFO_FILENAME).'.webp';
             return asset("images/webp/{$size}/{$file_path}/{$file_name}");
