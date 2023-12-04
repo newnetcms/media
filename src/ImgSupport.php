@@ -32,6 +32,11 @@ class ImgSupport
             return '';
         }
 
+        $ext = pathinfo($file, PATHINFO_EXTENSION);
+        if ($ext == 'svg') {
+            return $file;
+        }
+
         if (preg_match('/^http/', $file)) {
             if (parse_url($file, PHP_URL_HOST) == parse_url(url('/'), PHP_URL_HOST)) {
                 $file = ltrim(parse_url($file, PHP_URL_PATH), '/');
@@ -47,7 +52,7 @@ class ImgSupport
         }
 
         $supportWebp = in_array('image/webp', request()->getAcceptableContentTypes());
-        if (config('cms.media.enable_webp') && $supportWebp) {
+        if (config('cms.media.enable_webp') && $supportWebp && $ext != 'webp') {
             $file_path = base64_encode($file);
             $file_name = pathinfo($file, PATHINFO_FILENAME).'.webp';
             return asset("images/webp/{$size}/{$file_path}/{$file_name}");
