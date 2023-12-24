@@ -6,6 +6,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Newnet\Media\Events\MediaUploadedEvent;
+use Newnet\Media\Exceptions\UnsupportedFileExtensionException;
 use Newnet\Media\Models\Media;
 use Symfony\Component\HttpFoundation\File\File;
 
@@ -42,16 +43,17 @@ class MediaUploader
         if (is_string($file)) {
             $fileName = basename($file);
             $file = new File($file);
+            $this->mimeType = $file->getMimeType();
+            $this->size = $file->getSize();
+            $this->ext = $file->getExtension();
         } else {
             $fileName = $file->getClientOriginalName();
+            $this->mimeType = $file->getMimeType();
+            $this->size = $file->getSize();
+            $this->ext = $file->getClientOriginalExtension();
         }
 
         $this->file = $file;
-
-
-        $this->mimeType = $file->getMimeType();
-        $this->size = $file->getSize();
-        $this->ext = $file->getExtension();
 
         $name = pathinfo($fileName, PATHINFO_FILENAME);
 
@@ -136,6 +138,8 @@ class MediaUploader
      */
     public function upload()
     {
+        $this->verifyExtension();
+
         $model = config('cms.media.model');
 
         /** @var Media $media */
@@ -213,5 +217,12 @@ class MediaUploader
         $this->author = $user;
 
         return $this;
+    }
+
+    protected function verifyExtension()
+    {
+        if (!in_array($this->ext, config('cms.media.accept_upload_extension'))) {
+            throw new UnsupportedFileExtensionException();
+        }
     }
 }
