@@ -221,7 +221,7 @@ class MediaUploader
 
     protected function verifyExtension()
     {
-        if (!in_array($this->ext, config('cms.media.accept_upload_extension'))) {
+        if (!in_array(Str::lower($this->ext), config('cms.media.accept_upload_extension'))) {
             throw new UnsupportedFileExtensionException();
         }
     }
