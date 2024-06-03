@@ -67,4 +67,6 @@ return [
         'mp4', 'm4v', 'mpg', 'mov', 'vtt', 'avi', 'ogv', 'wmv', '3gp', '3g2',
         'xml', 'csv', 'txt', 'zip'
     ],
+
+    'ignore_models' => [],
 ];
