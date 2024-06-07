@@ -26,8 +26,11 @@ class MediaRepository extends BaseRepository implements MediaRepositoryInterface
     {
         $ignore_models = config('cms.media.ignore_models');
 
-        return Media::whereHas('mediables', function ($q) use ($ignore_models) {
-                $q->whereNotIn('mediable_type', $ignore_models);
+        return Media::where(function ($q) use ($ignore_models) {
+                $q->whereHas('mediables', function ($q) use ($ignore_models) {
+                    $q->whereNotIn('mediable_type', $ignore_models);
+                });
+                $q->orDoesntHave('mediables');
             })
             ->orderByDesc('id')
             ->paginate($itemOnPage);

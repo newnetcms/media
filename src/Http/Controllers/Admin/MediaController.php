@@ -216,6 +216,9 @@ class MediaController extends Controller
                         return redirect()->back()->with('errors', $validator->errors()->getMessages());
                     } else {
                         $media = $mediaUploader->setFile($file)->upload();
+                        return [
+                            'id' => $media,
+                        ];
                     }
                 }
             }
