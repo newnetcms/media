@@ -202,8 +202,8 @@ class MediaController extends Controller
     }
 
     public function storeAjax(Request $request, MediaUploader $mediaUploader){
-        try {
-            DB::beginTransaction();
+//        try {
+//            DB::beginTransaction();
             if ($files = $request->file('image-upload')) {
                 foreach($files as $file) {
                     $fileArray = array('image' => $file);
@@ -212,7 +212,7 @@ class MediaController extends Controller
                     );
                     $validator = \Validator::make($fileArray, $rules);
                     if ($validator->fails()) {
-                        DB::rollBack();
+//                        DB::rollBack();
                         return redirect()->back()->with('errors', $validator->errors()->getMessages());
                     } else {
                         $media = $mediaUploader->setFile($file)->upload();
@@ -222,11 +222,11 @@ class MediaController extends Controller
                     }
                 }
             }
-            DB::commit();
+//            DB::commit();
             return true;
-        } catch(\Exception $exception) {
-            DB::rollBack();
-            return false;
-        }
+//        } catch(\Exception $exception) {
+//            DB::rollBack();
+//            return false;
+//        }
     }
 }
