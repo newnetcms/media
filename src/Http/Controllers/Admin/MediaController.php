@@ -71,7 +71,7 @@ class MediaController extends Controller
     public function store(Request $request, MediaUploader $mediaUploader)
     {
         try {
-            DB::beginTransaction();
+//            DB::beginTransaction();
             if ($files = $request->file('image-upload')) {
                 foreach($files as $file) {
                     $fileArray = array('image' => $file);
@@ -80,17 +80,17 @@ class MediaController extends Controller
                     );
                     $validator = \Validator::make($fileArray, $rules);
                     if ($validator->fails()) {
-                        DB::rollBack();
+//                        DB::rollBack();
                         return redirect()->back()->with('errors', $validator->errors());
                     } else {
                         $media = $mediaUploader->setFile($file)->upload();
                     }
                 }
             }
-            DB::commit();
+//            DB::commit();
             return redirect()->back()->with('success', 'Uploaded Successfully!');
         } catch(\Exception $exception) {
-            DB::rollBack();
+//            DB::rollBack();
             return response()->json(['error' => $exception->getMessage()]);
         }
 
