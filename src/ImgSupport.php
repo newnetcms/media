@@ -26,7 +26,7 @@ class ImgSupport
         />', $class, $url_1, $url_2, $url_3, $url_4, $file, $alt);
     }
 
-    public function url($file, $width, $height = null)
+    public function url($file, $width = null, $height = null)
     {
         if (!$file) {
             return '';
@@ -45,7 +45,11 @@ class ImgSupport
             }
         }
 
-        $size = 'w'.$width;
+        $size = 'o';
+
+        if ($width) {
+            $size = 'w'.$width;
+        }
 
         if ($height) {
             $size .= 'h'.$height;

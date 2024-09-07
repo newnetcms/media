@@ -18,9 +18,18 @@ class CropImageController extends Controller
 
             list($width, $height, $quality) = $this->getImageSizeOptions($size);
 
-            $image->fit($width, $height, function (Constraint $constraint) {
-                $constraint->upsize();
-            })->save($cropedPath, $quality);
+            if ($width && $height) {
+                $image->fit($width, $height, function (Constraint $constraint) {
+                    $constraint->upsize();
+                })->save($cropedPath, $quality);
+            } elseif ($width) {
+                $image->resize($width, null, function (Constraint $constraint) {
+                    $constraint->upsize();
+                    $constraint->aspectRatio();
+                })->save($cropedPath, $quality);
+            } else {
+                $image->save($cropedPath, $quality);
+            }
 
             return $image->response();
         }
@@ -46,11 +55,13 @@ class CropImageController extends Controller
                 $image->fit($width, $height, function (Constraint $constraint) {
                     $constraint->upsize();
                 })->save($cropedPath, null, 'webp');
-            } else {
-                $image->resize($width, $height, function (Constraint $constraint) {
+            } elseif ($width) {
+                $image->resize($width, null, function (Constraint $constraint) {
                     $constraint->upsize();
                     $constraint->aspectRatio();
                 })->save($cropedPath, null, 'webp');
+            } else {
+                $image->save($cropedPath, null, 'webp');
             }
 
             return $image->response();
