@@ -62,6 +62,10 @@ class ImgSupport
             return asset("images/webp/{$size}/{$file_path}/{$file_name}");
         }
 
-        return asset("images/size/{$size}/{$file}");
+        if ($width || $height) {
+            return asset("images/size/{$size}/{$file}");
+        }
+
+        return asset($file);
     }
 }
