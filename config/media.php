@@ -4,7 +4,7 @@ return [
     /*
      * The disk where files should be uploaded.
      */
-    'disk'  => env('MEDIA_DISK', env('FILESYSTEM_DRIVER', 'public')),
+    'disk'  => env('MEDIA_DISK', env('FILESYSTEM_DISK', 'public')),
 
     /*
      * The queue used to perform image conversions.
