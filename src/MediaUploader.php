@@ -33,6 +33,8 @@ class MediaUploader
     /** @var \Illuminate\Contracts\Auth\Authenticatable */
     protected $author;
 
+    protected $needVerifyExtension = true;
+
     /**
      * Set the file to be uploaded.
      * @param UploadedFile|string $file
@@ -138,7 +140,9 @@ class MediaUploader
      */
     public function upload()
     {
-        $this->verifyExtension();
+        if ($this->needVerifyExtension) {
+            $this->verifyExtension();
+        }
 
         $model = config('cms.media.model');
 
@@ -215,6 +219,13 @@ class MediaUploader
     public function setAuthor($user)
     {
         $this->author = $user;
+
+        return $this;
+    }
+
+    public function setVerifyExtension($value)
+    {
+        $this->needVerifyExtension = $value;
 
         return $this;
     }
