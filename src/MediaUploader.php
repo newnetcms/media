@@ -27,6 +27,8 @@ class MediaUploader
 
     protected $ext;
 
+    protected $disk;
+
     /** @var array */
     protected $attributes = [];
 
@@ -151,7 +153,7 @@ class MediaUploader
 
         $media->name = $this->name;
         $media->file_name = $this->fileName;
-        $media->disk = config('cms.media.disk');
+        $media->disk = $this->disk ?: config('cms.media.disk');
         $media->mime_type = $this->mimeType;
         $media->size = $this->size;
         $media->ext = $this->ext;
@@ -219,6 +221,13 @@ class MediaUploader
     public function setAuthor($user)
     {
         $this->author = $user;
+
+        return $this;
+    }
+
+    public function setDisk($disk)
+    {
+        $this->disk = $disk;
 
         return $this;
     }
