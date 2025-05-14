@@ -167,9 +167,9 @@ class MediaUploader
         $media->save();
 
         $media->filesystem()->putFileAs(
-            $media->getDirectory(),
+            dirname($media->getPath()),
             $this->file,
-            $this->fileName,
+            $media->file_name,
             [
                 'visibility' => 'public',
             ]
