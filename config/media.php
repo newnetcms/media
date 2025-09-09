@@ -69,4 +69,6 @@ return [
     ],
 
     'ignore_models' => [],
+
+    'enable_cache' => env('MEDIA_ENABLE_CACHE', false),
 ];

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Newnet\Media\Facades\Img;
 use Newnet\Media\Jobs\PerformConversions;
 use Newnet\Media\MediaGroup;
+use Newnet\Media\MediaWrapper;
 use Newnet\Media\Models\Media;
 
 /**
@@ -86,7 +87,30 @@ trait HasMediaTrait
      */
     public function getFirstMedia(string $group = 'default')
     {
-        return $this->getMedia($group)->first();
+        $class = $this::class;
+        $id    = $this->getKey();
+        $cacheKey = "media:{$class}:{$id}:{$group}";
+
+        // Nếu relation đã được eager-loaded thì dùng collection hiện có (không thêm query)
+        if ($this->relationLoaded('media')) {
+            $media = $this->media->where('pivot.group', $group)->first();
+            return new MediaWrapper($media, null, $cacheKey);
+        }
+
+        // Nếu chưa loaded -> tạo loader (callable) để query only-when-needed
+        $loader = function () use ($group) {
+            // Sử dụng relation builder (không dùng $this->media property)
+            // Sử dụng wherePivot để lọc theo pivot column
+            return $this->media()
+                ->wherePivot('group', $group)
+                // nếu relation định nghĩa orderBy('pivot_id'), bạn có thể lặp lại:
+                ->orderBy('pivot_id')
+                ->first();
+        };
+
+        return new MediaWrapper(null, $loader, $cacheKey);
+
+        // return $this->getMedia($group)->first();
     }
 
     /**
