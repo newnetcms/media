@@ -62,6 +62,14 @@ class MediaWrapper
         return $this->cachedUrl;
     }
 
+    public function delete()
+    {
+        $media = $this->getMedia();
+        if ($media) {
+            $media->delete();
+        }
+    }
+
     /** Khi bị ép thành string (echo, concat, (string)$obj) */
     public function __toString(): string
     {

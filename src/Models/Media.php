@@ -5,6 +5,7 @@ namespace Newnet\Media\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Kra8\Snowflake\Snowflake;
 use Newnet\Core\Support\Traits\CacheableTrait;
 
 /**
@@ -70,10 +71,20 @@ class Media extends Model
     {
         parent::boot();
 
+        static::creating(function ($media) {
+            $prefix = app(Snowflake::class)->next();
+            $media->file_name = $prefix . '-' . $media->file_name;
+            $media->attrs = array_merge($media->attrs ?? [], ['ver2' => true]);
+        });
+
         self::deleting(function (Media $model) {
-            $model->filesystem()->deleteDirectory(
-                $model->getDirectory()
-            );
+            if ($model->isVer2()) {
+                $model->filesystem()->delete($model->getPath());
+            } else {
+                $model->filesystem()->deleteDirectory(
+                    $model->getDirectory()
+                );
+            }
         });
     }
 
@@ -147,6 +158,10 @@ class Media extends Model
      */
     public function getPath(string $conversion = '')
     {
+        if ($this->isVer2()) {
+            return $this->created_at->format('Y/m') . DIRECTORY_SEPARATOR . $this->file_name;
+        }
+
         $directory = $this->getDirectory();
 
 //        if ($conversion) {
@@ -205,5 +220,14 @@ class Media extends Model
         }else{
             return $this->getUrl();
         }
+    }
+
+    public function isVer2()
+    {
+        if (!$this->exists) {
+            return true;
+        }
+
+        return $this->attrs['ver2'] ?? false;
     }
 }
