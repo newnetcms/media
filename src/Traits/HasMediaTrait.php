@@ -87,6 +87,10 @@ trait HasMediaTrait
      */
     public function getFirstMedia(string $group = 'default')
     {
+        if (!config('cms.media.enable_cache')) {
+            return $this->getMedia($group)->first();
+        }
+
         $class = $this::class;
         $id    = $this->getKey();
         $cacheKey = "media:{$class}:{$id}:{$group}";
@@ -109,8 +113,6 @@ trait HasMediaTrait
         };
 
         return new MediaWrapper(null, $loader, $cacheKey);
-
-        // return $this->getMedia($group)->first();
     }
 
     /**
