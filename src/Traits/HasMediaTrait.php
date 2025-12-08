@@ -4,6 +4,7 @@ namespace Newnet\Media\Traits;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Facades\Cache;
 use Newnet\Media\Facades\Img;
 use Newnet\Media\Jobs\PerformConversions;
 use Newnet\Media\MediaGroup;
@@ -34,12 +35,16 @@ trait HasMediaTrait
             } else {
                 $model->media()->detach();
             }
+
+            $model->clearCaches();
         });
 
         static::saved(function (self $model) {
             foreach ($model->mediaAttributes as $key => $value) {
                 $model->syncMedia($value, $key);
             }
+
+            $model->clearCaches();
         });
     }
 
@@ -87,9 +92,11 @@ trait HasMediaTrait
      */
     public function getFirstMedia(string $group = 'default')
     {
-        $class = $this::class;
-        $id    = $this->getKey();
-        $cacheKey = "media:{$class}:{$id}:{$group}";
+        if (!config('cms.media.enable_cache')) {
+            return $this->getMedia($group)->first();
+        }
+
+        $cacheKey = $this->getCacheKey($group);
 
         // Nếu relation đã được eager-loaded thì dùng collection hiện có (không thêm query)
         if ($this->relationLoaded('media')) {
@@ -109,8 +116,6 @@ trait HasMediaTrait
         };
 
         return new MediaWrapper(null, $loader, $cacheKey);
-
-        // return $this->getMedia($group)->first();
     }
 
     /**
@@ -269,5 +274,25 @@ trait HasMediaTrait
     protected function forceDeleteMedia()
     {
         return property_exists($this, 'forceDeleteMedia') ? $this->forceDeleteMedia : false;
+    }
+
+    protected function getCacheKey(string $group): string
+    {
+        $class = $this::class;
+        $id = $this->getKey();
+
+        return "media:{$class}:{$id}:{$group}";
+    }
+
+    public function clearCaches()
+    {
+        if (!config('cms.media.enable_cache')) {
+            return;
+        }
+
+        foreach ($this->mediaAttributes as $group => $value) {
+            $cacheKey = $this->getCacheKey($group);
+            Cache::forget($cacheKey);
+        }
     }
 }
