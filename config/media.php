@@ -71,4 +71,10 @@ return [
     'ignore_models' => [],
 
     'enable_cache' => env('MEDIA_ENABLE_CACHE', false),
+
+    // bật/tắt CDN
+    'use_cdn' => env('MEDIA_USE_CDN', false),
+
+    // base url CDN
+    'cdn_url' => env('MEDIA_CDN_URL', 'https://cdn2n.net'),
 ];

@@ -59,13 +59,13 @@ class ImgSupport
         if (config('cms.media.enable_webp') && $supportWebp && $ext != 'webp') {
             $file_path = base64_encode($file);
             $file_name = pathinfo($file, PATHINFO_FILENAME).'.webp';
-            return asset("images/webp/{$size}/{$file_path}/{$file_name}");
+            return media_url("images/webp/{$size}/{$file_path}/{$file_name}");
         }
 
         if ($width || $height) {
-            return asset("images/size/{$size}/{$file}");
+            return media_url("images/size/{$size}/{$file}");
         }
 
-        return asset($file);
+        return media_url($file);
     }
 }

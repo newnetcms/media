@@ -40,3 +40,14 @@ if (!function_exists('imageProxy')){
         }
     }
 }
+
+if (!function_exists('media_url')) {
+    function media_url(string $path): string
+    {
+        if (config('cms.media.use_cdn')) {
+            return rtrim(config('cms.media.cdn_url'), '/') . '/' . ltrim($path, '/');
+        }
+
+        return asset($path);
+    }
+}

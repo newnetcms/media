@@ -132,9 +132,17 @@ class Media extends Model
      */
     public function getUrl(string $conversion = '')
     {
-        return $this->filesystem()->url(
-            $this->getPath($conversion)
-        );
+        $path = $this->getPath($conversion);
+        $url  = $this->filesystem()->url($path);
+
+        if (!config('cms.media.use_cdn')) {
+            return $url;
+        }
+
+        $origin = rtrim(config('app.url'), '/');
+        $cdn    = rtrim(config('cms.media.cdn_url'), '/');
+
+        return str_replace($origin, $cdn, $url);
     }
 
     /**
