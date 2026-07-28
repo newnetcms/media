@@ -8,7 +8,11 @@
                     @foreach($listMedia as $mediaId)
                         @if($media = get_media($mediaId))
                             <div class="gallery-item">
-                                <img src="{{ Img::url($media->getUrl(), 300, 300) }}" alt="Image">
+                                @if($media->isOfType('image'))
+                                    <img src="{{ Img::url($media->getUrl(), 300, 300) }}" alt="Image">
+                                @else
+                                    @include('media::form.partials.file-type-icon', ['media' => $media])
+                                @endif
                                 <input type="hidden" name="{{ $name }}[]" value="{{ $media->id }}">
                                 <a href="#" class="remove-media" title="Delete Image"><i class="fas fa-times-circle"></i></a>
                             </div>
@@ -17,7 +21,11 @@
                 @elseif($item && method_exists($item, 'getMedia') && $item->hasMedia($name))
                     @foreach($item->getMedia($name) as $media)
                         <div class="gallery-item">
-                            <img src="{{ Img::url($media->getUrl(), 300, 300) }}" alt="Image">
+                            @if($media->isOfType('image'))
+                                <img src="{{ Img::url($media->getUrl(), 300, 300) }}" alt="Image">
+                            @else
+                                @include('media::form.partials.file-type-icon', ['media' => $media])
+                            @endif
                             <input type="hidden" name="{{ $name }}[]" value="{{ $media->id }}">
                             <a href="#" class="remove-media" title="Delete Image"><i class="fas fa-times-circle"></i></a>
                         </div>
@@ -26,7 +34,11 @@
                     @foreach($listMedia as $mediaId)
                         @if($media = get_media($mediaId))
                             <div class="gallery-item" data-alt="{{ object_get($media, 'mediaTags.label') }}">
-                                <img src="{{ Img::url($media->getUrl(), 300, 300) }}" alt="Image">
+                                @if($media->isOfType('image'))
+                                    <img src="{{ Img::url($media->getUrl(), 300, 300) }}" alt="Image">
+                                @else
+                                    @include('media::form.partials.file-type-icon', ['media' => $media])
+                                @endif
                                 <input type="hidden" name="{{ $name }}[]" value="{{ $media->id }}">
                                 <a href="#" class="remove-media" title="Delete Image"><i class="fas fa-times-circle"></i></a>
                             </div>

@@ -15,8 +15,39 @@
             margin-top: 50px;
         }
 
-        .editImageSelected.active-img img {
+        .editImageSelected.active-img img,
+        .editImageSelected.active-img .media-file-type-preview {
             border: 4px solid deepskyblue;
+        }
+
+        .media-file-type-preview {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100px;
+            height: 100px;
+            border: 1px solid #dee2e6;
+            border-radius: .25rem;
+            background: #fafafa;
+            color: #6c757d;
+        }
+
+        .media-file-type-preview i {
+            font-size: 32px;
+        }
+
+        .media-file-type-preview .media-file-ext {
+            margin-top: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .gallery-item .media-file-type-preview {
+            width: 100%;
+            height: auto;
+            padding: 15px 0;
         }
     </style>
 @endpush
@@ -81,9 +112,35 @@
             var paginate = 1;
             let dataId = null;
             let dataImg = null
+            let dataType = null
+            let dataExt = null
             let findInput = null
             let findImg = null
             let checkClose = null
+
+            // Mirrors lib/media/resources/views/form/partials/file-type-icon.blade.php - keep the two in sync
+            function fileIconClass(ext) {
+                var map = {
+                    PDF: 'fa-file-pdf',
+                    DOC: 'fa-file-word', DOCX: 'fa-file-word',
+                    XLS: 'fa-file-excel', XLSX: 'fa-file-excel', CSV: 'fa-file-excel',
+                    PPT: 'fa-file-powerpoint', PPTX: 'fa-file-powerpoint',
+                    ZIP: 'fa-file-archive', RAR: 'fa-file-archive', '7Z': 'fa-file-archive', TAR: 'fa-file-archive', GZ: 'fa-file-archive',
+                    MP3: 'fa-file-audio', WAV: 'fa-file-audio', OGG: 'fa-file-audio',
+                    MP4: 'fa-file-video', MOV: 'fa-file-video', AVI: 'fa-file-video', WMV: 'fa-file-video', MKV: 'fa-file-video',
+                    TXT: 'fa-file-alt'
+                }
+                return map[(ext || '').toUpperCase()] || 'fa-file'
+            }
+
+            function fileTypePreviewHtml(ext) {
+                return `
+                    <div class="media-file-type-preview">
+                        <i class="fas ${fileIconClass(ext)}"></i>
+                        <span class="media-file-ext">${ext || ''}</span>
+                    </div>
+                `
+            }
 
             function reloadImg() {
                 $.ajax({
@@ -178,6 +235,8 @@
                 }
                 dataId = $(this).attr('data-id');
                 dataImg = $(this).attr('data-src')
+                dataType = $(this).attr('data-type')
+                dataExt = $(this).attr('data-ext')
                 findInput = $('.media-preview-{{$name}}').find('input')
                 findImg = $('.media-preview-{{$name}}').find('img')
                 checkClose = $('.media-preview-{{$name}}').hasClass('.remove-media')
@@ -187,13 +246,18 @@
             $('.js-save-img-media-{{$name}}').click(function () {
                 $(findInput).remove()
                 $(findImg).remove()
+                $('.media-preview-{{$name}}').find('.media-file-type-preview').remove()
 
                 $('.media-preview-{{$name}}').append(`
                     <input type="hidden" name="{{ $name }}" value="${dataId}">
                 `)
-                $('.media-preview-{{$name}}').append(`
-                     <img src="${dataImg}" alt="Image" class="img-thumbnail">
-                `)
+                if (dataType === 'image') {
+                    $('.media-preview-{{$name}}').append(`
+                         <img src="${dataImg}" alt="Image" class="img-thumbnail">
+                    `)
+                } else {
+                    $('.media-preview-{{$name}}').append(fileTypePreviewHtml(dataExt))
+                }
                 if (!checkClose) {
                     $('.media-preview-{{$name}}').append(`
                     <a href="#" class="remove-media">
@@ -207,11 +271,13 @@
             })
 
             $('.js-save-gallery-media-{{$name}}').click(function () {
+                let preview = dataType === 'image'
+                    ? `<img src="${dataImg}" alt="Image">`
+                    : fileTypePreviewHtml(dataExt)
+
                 $('.gallery-list-{{$name}}').append(`
                 <div class="gallery-item ui-sortable-handle">
-                        <img
-                            src="${dataImg}"
-                            alt="Image">
+                        ${preview}
                             <input type="hidden" name="{{ $name }}[]" value="${dataId}">
                                 <a href="#" title="Delete Image" class="remove-media">
                                     <i class="fas fa-times-circle"></i>
