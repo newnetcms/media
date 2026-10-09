@@ -3,6 +3,7 @@
 namespace Newnet\Media;
 
 use Illuminate\Support\Facades\Blade;
+use Intervention\Image\ImageManager;
 use Newnet\Media\Models\Media;
 use Newnet\Media\Models\Mediable;
 use Newnet\Media\Repositories\MediableRepository;
@@ -19,6 +20,12 @@ class MediaServiceProvider extends BaseModuleServiceProvider
 
         $this->app->singleton(ConversionRegistry::class);
         $this->app->singleton(MediaUploader::class);
+
+        if (!ImageProcessor::isLegacy()) {
+            $this->app->bindIf(ImageManager::class, function () {
+                return ImageProcessor::createManager();
+            });
+        }
 
         $this->app->singleton(MediaRepositoryInterface::class, function () {
             return new MediaRepository(new Media());

@@ -4,34 +4,18 @@ namespace Newnet\Media\Http\Controllers\Web;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\File;
-use Intervention\Image\Constraint;
-use Intervention\Image\Facades\Image;
+use Newnet\Media\ImageProcessor;
 
 class CropImageController extends Controller
 {
     public function __invoke($size, $file)
     {
         if ($this->detectInternalImage($file)) {
-            $image = Image::make($file);
-
             $cropedPath = $this->getCropedPath($file, $size);
 
             list($width, $height, $quality) = $this->getImageSizeOptions($size);
 
-            if ($width && $height) {
-                $image->fit($width, $height, function (Constraint $constraint) {
-                    $constraint->upsize();
-                })->save($cropedPath, $quality);
-            } elseif ($width) {
-                $image->resize($width, null, function (Constraint $constraint) {
-                    $constraint->upsize();
-                    $constraint->aspectRatio();
-                })->save($cropedPath, $quality);
-            } else {
-                $image->save($cropedPath, $quality);
-            }
-
-            return $image->response();
+            return ImageProcessor::crop($file, $cropedPath, $width, $height, $quality);
         }
 
         return response('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=')
@@ -45,26 +29,11 @@ class CropImageController extends Controller
         $file = base64_decode($file_path);
 
         if ($this->detectInternalImage($file)) {
-            $image = Image::make($file);
-
             $cropedPath = $this->getWebpPath($size, $file_path, $file_name);
 
-            list($width, $height, $quality) = $this->getImageSizeOptions($size);
+            list($width, $height) = $this->getImageSizeOptions($size);
 
-            if ($width && $height) {
-                $image->fit($width, $height, function (Constraint $constraint) {
-                    $constraint->upsize();
-                })->save($cropedPath, null, 'webp');
-            } elseif ($width) {
-                $image->resize($width, null, function (Constraint $constraint) {
-                    $constraint->upsize();
-                    $constraint->aspectRatio();
-                })->save($cropedPath, null, 'webp');
-            } else {
-                $image->save($cropedPath, null, 'webp');
-            }
-
-            return $image->response();
+            return ImageProcessor::crop($file, $cropedPath, $width, $height, null, 'webp');
         }
 
         return response('data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==')

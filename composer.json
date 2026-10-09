@@ -2,7 +2,7 @@
     "name": "newnetcms/media",
     "description": "Media",
     "require": {
-        "intervention/image": "^2.5"
+        "intervention/image": "^2.5|^4.0"
     },
     "autoload": {
         "psr-4": {

@@ -52,11 +52,11 @@ class ImageManipulator
 
             $converter = $this->conversionRegistry->get($conversion);
 
-            $image = $converter($this->imageManager->make(
-                $filesystem->readStream($media->getPath())
+            $image = $converter(ImageProcessor::read(
+                $this->imageManager, $filesystem->readStream($media->getPath())
             ));
 
-            $filesystem->put($path, $image->stream(), [
+            $filesystem->put($path, ImageProcessor::contents($image, $media->mime_type), [
                 'visibility' => 'public'
             ]);
         }
