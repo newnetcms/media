@@ -1572,7 +1572,9 @@
                 var $editorModal = $('.modal-media-file-{{$name}}').appendTo('body')
 
                 window.NewnetMediaPicker = {
-                    // options: {filetype: 'image' | 'media' | 'file', onSelect: function (media) {}}
+                    // options: {filetype: 'image' | 'media' | 'file' | 'any', onSelect: function (media) {}}
+                    // image/media giới hạn loại file (xem editorExtensionGroups); file
+                    // (dialog Link) và any (nút toolbar) nhận mọi file được phép.
                     // media: {id, url, name, kind, src, type, ext} — url là link file gốc.
                     open: function (options) {
                         editorRequest = options
