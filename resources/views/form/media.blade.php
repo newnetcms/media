@@ -161,6 +161,13 @@
         }
 
         /* Riêng modal "File manager" của field {{$name}} này */
+        /* Mở từ dialog Chèn ảnh/Link/Media của TinyMCE (.tox-tinymce-aux có
+           z-index 1300) nên phải nổi trên dialog đó; backdrop chỉnh trong JS
+           lúc shown.bs.modal (Bootstrap tự tạo backdrop với z-index 1040). */
+        .modal-media-file-{{$name}}.media-picker--editor {
+            z-index: 1310;
+        }
+
         .modal-media-file-{{$name}} .modal-dialog {
             max-width: 1680px;
             width: 96%;
@@ -858,13 +865,20 @@
         }
     </style>
 @endpush
+{{-- media_type=editor: chỉ có modal, không có field (preview/hidden input) —
+     file chọn được trả về cho TinyMCE qua window.NewnetMediaPicker.open() --}}
+{{-- Dạng block, không dùng dạng inline: Blade ghép block php/endphp từ chỗ
+     "php" ĐẦU TIÊN trong file, trộn 2 dạng sẽ nuốt cả đoạn markup ở giữa. --}}
+@php
+    $isEditorPicker = isset($media_type) && $media_type == 'editor';
+@endphp
 @if(isset($media_type) && $media_type == 'gallery')
     @include('media::form.gallery')
-@else
+@elseif(!$isEditorPicker)
     @include('media::form.file')
 @endif
 
-<div class="modal fade modal-media-file-{{$name}}"
+<div class="modal fade modal-media-file-{{$name}} {{ $isEditorPicker ? 'media-picker--editor' : '' }}"
      tabindex="-1"
      role="dialog"
      aria-labelledby="myLargeModalLabel"
@@ -954,6 +968,21 @@
 </div>
 
 @push('scripts')
+    @php
+        // Tính sẵn ra biến rồi mới đưa vào @json: directive @json tách tham số
+        // bằng dấu phẩy (regex), truyền thẳng mảng/biểu thức nhiều dấu phẩy sẽ
+        // bị cắt cụt thành PHP lỗi cú pháp.
+        $pickerIsGallery = isset($media_type) && $media_type == 'gallery';
+        $pickerAllowedExtensions = array_values(array_map('strtolower', config('cms.media.accept_upload_extension', [])));
+        $pickerImageExtensions = \Newnet\Media\Models\Media::DISPLAYABLE_IMAGE_EXTENSIONS;
+        $pickerUploadMessages = [
+            'error' => __('media::media.upload.error'),
+            'unsupportedType' => __('media::media.upload.unsupported_type'),
+            'singleOnly' => __('media::media.upload.single_only'),
+            'imageRequired' => __('media::media.picker.image_required'),
+            'mediaRequired' => __('media::media.picker.media_required'),
+        ];
+    @endphp
     <script>
         $(document).ready(function () {
             var paginate = 1;
@@ -971,6 +1000,9 @@
             let dataImg = null
             let dataType = null
             let dataExt = null
+            let dataUrl = null
+            let dataName = null
+            let dataKind = null
 
             // Mirrors lib/media/resources/views/form/partials/file-type-icon.blade.php - keep the two in sync
             function fileIconClass(ext) {
@@ -1176,11 +1208,36 @@
             // vừa upload vào field (xem finishUploadBatch()). Lưu ý: không viết tên
             // directive Blade (dạng @tên) trong comment ở file này — Blade vẫn biên
             // dịch nó kể cả trong comment JS, gây include đệ quy chính view này.
-            var isGalleryMode = @json(isset($media_type) && $media_type == 'gallery');
+            var isGalleryMode = @json($pickerIsGallery);
+            // media_type=editor: 1 modal dùng chung cho mọi TinyMCE trên trang (nhúng
+            // từ form/editor.blade.php của admin-ui), file chọn được trả về qua
+            // onSelect của window.NewnetMediaPicker.open() thay vì ghi vào field.
+            var isEditorMode = @json($isEditorPicker);
             // Cùng allowlist mà MediaUploader::verifyExtension() kiểm tra ở server —
             // chặn sớm ở client để khỏi tải cả file lên rồi mới bị từ chối.
-            var allowedExtensions = @json(array_values(array_map('strtolower', config('cms.media.accept_upload_extension', []))));
-            var uploadMessages = @json(['error' => __('media::media.upload.error'), 'unsupportedType' => __('media::media.upload.unsupported_type'), 'singleOnly' => __('media::media.upload.single_only')]);
+            var allowedExtensions = @json($pickerAllowedExtensions);
+            var uploadMessages = @json($pickerUploadMessages);
+
+            // Theo loại dialog TinyMCE gọi tới (meta.filetype): "image" chỉ nhận ảnh
+            // trình duyệt hiển thị được (dùng làm src của <img>), "media" nhận
+            // video/audio, "file" (dialog Link) nhận mọi file được phép.
+            var editorExtensionGroups = {
+                image: @json($pickerImageExtensions),
+                media: ['mp4', 'm4v', 'mpg', 'mov', 'avi', 'ogv', 'wmv', '3gp', '3g2', 'mp3', 'ogg', 'wav']
+            }
+            var editorRequiredKinds = {image: ['image'], media: ['video', 'audio']}
+            var editorInitialType = {image: 'image', media: 'video'}
+            var editorRequest = null
+
+            function currentAllowedExtensions() {
+                var group = editorRequest && editorExtensionGroups[editorRequest.filetype]
+                if (!group) {
+                    return allowedExtensions
+                }
+                return allowedExtensions.filter(function (ext) {
+                    return group.indexOf(ext) !== -1
+                })
+            }
 
             function fileExtension(fileName) {
                 var parts = (fileName || '').split('.')
@@ -1280,6 +1337,16 @@
             function finishUploadBatch(batch) {
                 var uploaded = batch.uploaded.filter(Boolean)
 
+                if (isEditorMode) {
+                    reloadImg()
+                    if (uploaded.length && !batch.failed) {
+                        setTimeout(function () {
+                            deliverToEditor(uploaded[0])
+                        }, 600)
+                    }
+                    return
+                }
+
                 if (uploaded.length) {
                     if (isGalleryMode) {
                         uploaded.forEach(appendGalleryItem)
@@ -1312,8 +1379,9 @@
                 }
 
                 var batch = {pending: 0, failed: false, uploaded: []}
+                var uploadExtensions = currentAllowedExtensions()
                 var accepted = files.filter(function (file) {
-                    if (allowedExtensions.indexOf(fileExtension(file.name)) === -1) {
+                    if (uploadExtensions.indexOf(fileExtension(file.name)) === -1) {
                         markUploadItemError(createUploadItem(file.name), uploadMessages.unsupportedType)
                         batch.failed = true
                         return false
@@ -1386,20 +1454,19 @@
                 // appendImg(2)
             })
 
-            $(document).on('click', '.editImageSelected', function () {
-                let checkClassImg = $('.editImageSelected').hasClass('active-img')
-                if (checkClassImg) {
-                    for (let i = 0; i < $('.editImageSelected').length; i++) {
-                        $($('.editImageSelected')[i]).removeClass('active-img')
-                    }
-                    $(this).addClass('active-img')
-                } else {
-                    $(this).addClass('active-img')
-                }
+            // Khoanh vùng trong đúng modal của instance này: trước đây bind trên
+            // document nên 1 trang có nhiều picker (vd field ảnh + picker của
+            // TinyMCE) thì bấm chọn ở modal này cũng ghi đè lựa chọn của modal kia.
+            $('.js-modal-html-{{$name}}').on('click', '.editImageSelected', function () {
+                $('.js-modal-html-{{$name}} .editImageSelected').removeClass('active-img')
+                $(this).addClass('active-img')
                 dataId = $(this).attr('data-id');
                 dataImg = $(this).attr('data-src')
                 dataType = $(this).attr('data-type')
                 dataExt = $(this).attr('data-ext')
+                dataUrl = $(this).attr('data-url')
+                dataName = $(this).attr('data-name')
+                dataKind = $(this).attr('data-kind')
             })
 
             // Dùng chung cho nút Lưu (file đang chọn trong thư viện) và tự chọn
@@ -1439,11 +1506,50 @@
             }
 
             function selectedMedia() {
-                return dataId ? {id: dataId, src: dataImg, type: dataType, ext: dataExt} : null
+                return dataId ? {
+                    id: dataId,
+                    src: dataImg,
+                    type: dataType,
+                    ext: dataExt,
+                    url: dataUrl,
+                    name: dataName,
+                    kind: dataKind
+                } : null
+            }
+
+            // Trả file đã chọn/vừa upload về cho TinyMCE — chặn sai loại so với
+            // dialog đang mở (vd dialog Chèn ảnh không nhận PDF làm src ảnh), báo
+            // lỗi ngay trong modal và giữ modal mở để chọn lại.
+            function deliverToEditor(media) {
+                if (!editorRequest) {
+                    return
+                }
+
+                var requiredKinds = editorRequiredKinds[editorRequest.filetype]
+                if (requiredKinds && requiredKinds.indexOf(media.kind) === -1) {
+                    var message = editorRequest.filetype === 'image' ? uploadMessages.imageRequired : uploadMessages.mediaRequired
+                    markUploadItemError(createUploadItem(media.name || media.ext || ''), message)
+                    return
+                }
+
+                var request = editorRequest
+                editorRequest = null
+                request.onSelect(media)
+                $('.modal-media-file-{{$name}}').modal('hide')
             }
 
             $('.js-save-img-media-{{$name}}').click(function () {
                 var media = selectedMedia()
+
+                if (isEditorMode) {
+                    if (media) {
+                        deliverToEditor(media)
+                    } else {
+                        $('.modal-media-file-{{$name}}').modal('hide')
+                    }
+                    return
+                }
+
                 if (media) {
                     applySingleSelection(media)
                 }
@@ -1457,6 +1563,43 @@
                 }
                 $('.modal-media-file-{{$name}}').modal('hide');
             })
+
+            if (isEditorMode) {
+                // Đưa modal ra thẳng <body>: tránh bị kẹt trong stacking context của
+                // phần tử cha (khi đó z-index 1310 không vượt được dialog TinyMCE
+                // vốn gắn ở body), và để input file bên trong không bị submit theo
+                // form chứa editor.
+                var $editorModal = $('.modal-media-file-{{$name}}').appendTo('body')
+
+                window.NewnetMediaPicker = {
+                    // options: {filetype: 'image' | 'media' | 'file', onSelect: function (media) {}}
+                    // media: {id, url, name, kind, src, type, ext} — url là link file gốc.
+                    open: function (options) {
+                        editorRequest = options
+                        dataId = null
+                        $('.js-modal-html-{{$name}} .editImageSelected').removeClass('active-img')
+                        $('#image-upload-{{$name}}').attr('accept', currentAllowedExtensions().map(function (ext) {
+                            return '.' + ext
+                        }).join(','))
+
+                        var initialType = editorInitialType[options.filetype] || 'all'
+                        if (currentType !== initialType || !$('.js-modal-html-{{$name}}').html()) {
+                            currentType = initialType
+                            reloadImg()
+                        }
+
+                        $editorModal.modal('show')
+                    }
+                }
+
+                $editorModal.on('shown.bs.modal', function () {
+                    $('.modal-backdrop').last().css('z-index', 1305)
+                })
+
+                $editorModal.on('hidden.bs.modal', function () {
+                    editorRequest = null
+                })
+            }
             })
     </script>
 @endpush

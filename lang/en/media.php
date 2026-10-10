@@ -56,6 +56,8 @@ return [
     // media list page (admin/index.blade.php) doesn't use these keys.
     'picker' => [
         'title' => 'File manager',
+        'image_required' => 'Please choose an image file',
+        'media_required' => 'Please choose a video or audio file',
     ],
 
     'list' => [

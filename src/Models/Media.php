@@ -51,6 +51,9 @@ class Media extends Model
 {
     use CacheableTrait;
 
+    /** Đuôi ảnh trình duyệt hiển thị được qua <img> — xem isDisplayableImage(). */
+    public const DISPLAYABLE_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+
     protected $table = 'media';
 
     protected $fillable = [
@@ -134,9 +137,25 @@ class Media extends Model
      */
     public function isDisplayableImage(): bool
     {
-        $displayableExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+        return $this->isOfType('image') && in_array(Str::lower($this->extension), self::DISPLAYABLE_IMAGE_EXTENSIONS, true);
+    }
 
-        return $this->isOfType('image') && in_array(Str::lower($this->extension), $displayableExtensions, true);
+    /**
+     * Loại file khi chèn vào nội dung (TinyMCE): image chỉ khi trình duyệt hiển
+     * thị được (khác bucket "Ảnh" ở sidebar — HEIC vẫn tính là ảnh ở đó nhưng
+     * không chèn được làm <img>), video/audio theo mime, còn lại là document.
+     */
+    public function insertableKind(): string
+    {
+        if ($this->isDisplayableImage()) {
+            return 'image';
+        }
+
+        if ($this->isOfType('video') || $this->isOfType('audio')) {
+            return $this->type;
+        }
+
+        return 'document';
     }
 
     /**

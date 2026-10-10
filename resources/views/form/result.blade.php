@@ -9,7 +9,10 @@
              data-id="{{ $media->id }}"
              data-src="{{ $media->isOfType('image') ? Img::url($media->getUrl(), 300, 300) : '' }}"
              data-type="{{ $media->isOfType('image') ? 'image' : 'other' }}"
-             data-ext="{{ strtoupper($media->extension) }}">
+             data-ext="{{ strtoupper($media->extension) }}"
+             data-url="{{ $media->getUrl() }}"
+             data-name="{{ $media->name }}"
+             data-kind="{{ $media->insertableKind() }}">
             <div class="card">
                 <a href="#" class="icon-menu-item editImage" data-toggle="modal" data-target="#edit" data-id="{{$media->id}}">
                     <span class="media-picker-item__preview">

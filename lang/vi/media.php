@@ -56,6 +56,8 @@ return [
     // sách media (admin/index.blade.php) không dùng các key này.
     'picker' => [
         'title' => 'Quản lý tệp',
+        'image_required' => 'Vui lòng chọn file ảnh',
+        'media_required' => 'Vui lòng chọn file video hoặc âm thanh',
     ],
 
     'list' => [

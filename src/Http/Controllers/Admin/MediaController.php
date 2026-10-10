@@ -667,6 +667,9 @@ class MediaController extends Controller
                 'src' => $isImage ? Img::url($media->getUrl(), 300, 300) : '',
                 'type' => $isImage ? 'image' : 'other',
                 'ext' => strtoupper($media->extension),
+                // url gốc + kind dùng khi chèn vào TinyMCE (src ở trên chỉ là thumbnail)
+                'url' => $media->getUrl(),
+                'kind' => $media->insertableKind(),
             ],
         ]);
     }
