@@ -241,7 +241,30 @@ class MediaUploader
 
     protected function verifyExtension()
     {
-        if (!in_array(Str::lower($this->ext), config('cms.media.accept_upload_extension'))) {
+        $ext = Str::lower($this->ext);
+
+        if (!in_array($ext, config('cms.media.accept_upload_extension'))) {
+            throw new UnsupportedFileExtensionException();
+        }
+
+        $this->verifyContentMatchesExtension($ext);
+    }
+
+    /**
+     * Ext nằm trong allowlist chưa đủ: file đổi tên ext (ví dụ đổi thành .jpg) vẫn phải có
+     * nội dung thật đúng loại đó, không chỉ dựa vào tên file.
+     */
+    protected function verifyContentMatchesExtension(string $ext)
+    {
+        $path = $this->file->getPathname();
+
+        $rasterImageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'];
+
+        if (in_array($ext, $rasterImageExtensions) && @getimagesize($path) === false) {
+            throw new UnsupportedFileExtensionException();
+        }
+
+        if ($ext === 'pdf' && substr((string) file_get_contents($path, false, null, 0, 5), 0, 5) !== '%PDF-') {
             throw new UnsupportedFileExtensionException();
         }
     }
