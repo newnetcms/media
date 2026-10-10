@@ -82,6 +82,8 @@ return [
         'error' => 'Upload failed',
         'unsupported_type' => 'File type not allowed',
         'single_only' => 'Only one file can be uploaded here',
+        'uploading' => 'Uploading :name',
+        'uploading_many' => 'Uploading :count files',
     ],
 
     'bulk' => [

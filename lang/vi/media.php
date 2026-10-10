@@ -82,6 +82,8 @@ return [
         'error' => 'Upload thất bại',
         'unsupported_type' => 'Định dạng file không được phép',
         'single_only' => 'Chỉ được tải lên 1 file cho mục này',
+        'uploading' => 'Đang tải lên :name',
+        'uploading_many' => 'Đang tải lên :count file',
     ],
 
     'bulk' => [
