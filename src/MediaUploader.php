@@ -6,9 +6,11 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Newnet\Media\Events\MediaUploadedEvent;
+use Newnet\Media\Exceptions\SuspiciousContentException;
 use Newnet\Media\Exceptions\UnsupportedFileExtensionException;
 use Newnet\Media\Models\Media;
 use Symfony\Component\HttpFoundation\File\File;
+use Throwable;
 
 class MediaUploader
 {
@@ -36,6 +38,12 @@ class MediaUploader
     protected $author;
 
     protected $needVerifyExtension = true;
+
+    /** Đường dẫn file tạm sau khi sanitize nội dung (nếu có), để dọn dẹp khi upload() xong. */
+    protected $sanitizedTempPath;
+
+    /** Ext ảnh raster mà GD/Intervention trên server này chắc chắn decode/encode lại được. */
+    protected array $rasterImageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'];
 
     /**
      * Set the file to be uploaded.
@@ -146,38 +154,48 @@ class MediaUploader
             $this->verifyExtension();
         }
 
-        $model = config('cms.media.model');
+        // Luôn chạy, không phụ thuộc needVerifyExtension: làm sạch nội dung khỏi payload
+        // nhúng (polyglot/EXIF-XSS...) trước khi file được lưu thật lên disk.
+        $this->sanitizeContent(Str::lower($this->ext));
 
-        /** @var Media $media */
-        $media = new $model();
+        try {
+            $model = config('cms.media.model');
 
-        $media->name = $this->name;
-        $media->file_name = $this->fileName;
-        $media->disk = $this->disk ?: config('cms.media.disk');
-        $media->mime_type = $this->mimeType;
-        $media->size = $this->size;
-        $media->ext = $this->ext;
+            /** @var Media $media */
+            $media = new $model();
 
-        if ($auth = $this->getAuthor()) {
-            $media->author()->associate($auth);
+            $media->name = $this->name;
+            $media->file_name = $this->fileName;
+            $media->disk = $this->disk ?: config('cms.media.disk');
+            $media->mime_type = $this->mimeType;
+            $media->size = $this->size;
+            $media->ext = $this->ext;
+
+            if ($auth = $this->getAuthor()) {
+                $media->author()->associate($auth);
+            }
+
+            $media->forceFill($this->attributes);
+
+            $media->save();
+
+            $media->filesystem()->putFileAs(
+                dirname($media->getPath()),
+                $this->file,
+                $media->file_name,
+                [
+                    'visibility' => 'public',
+                ]
+            );
+
+            event(new MediaUploadedEvent($media));
+
+            return $media->fresh();
+        } finally {
+            if ($this->sanitizedTempPath && file_exists($this->sanitizedTempPath)) {
+                @unlink($this->sanitizedTempPath);
+            }
         }
-
-        $media->forceFill($this->attributes);
-
-        $media->save();
-
-        $media->filesystem()->putFileAs(
-            dirname($media->getPath()),
-            $this->file,
-            $media->file_name,
-            [
-                'visibility' => 'public',
-            ]
-        );
-
-        event(new MediaUploadedEvent($media));
-
-        return $media->fresh();
     }
 
     public function uploadFromUrl($url, $realName = null)
@@ -258,14 +276,117 @@ class MediaUploader
     {
         $path = $this->file->getPathname();
 
-        $rasterImageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'];
-
-        if (in_array($ext, $rasterImageExtensions) && @getimagesize($path) === false) {
+        if (in_array($ext, $this->rasterImageExtensions) && @getimagesize($path) === false) {
             throw new UnsupportedFileExtensionException();
         }
 
         if ($ext === 'pdf' && substr((string) file_get_contents($path, false, null, 0, 5), 0, 5) !== '%PDF-') {
             throw new UnsupportedFileExtensionException();
         }
+    }
+
+    /**
+     * Làm sạch nội dung file theo loại, vì ext/mime hợp lệ không đảm bảo file không giấu payload:
+     * - Ảnh raster: decode rồi encode lại bằng Intervention — chỉ còn pixel thật, loại bỏ MỌI
+     *   vùng metadata (EXIF, JFIF comment, ICC, XMP...) bất kể payload giấu kiểu gì, không cần biết
+     *   trước signature của nó (khác hẳn cách chặn theo danh sách mẫu, vốn luôn có thể bị né).
+     * - SVG: không rasterize được (là vector/XML), nên chỉ lọc bỏ <script>, thuộc tính on*=, và
+     *   href="javascript:..." — các vector XSS nằm NGAY TRONG cú pháp SVG hợp lệ, không phải lỗi.
+     * - Loại còn lại (pdf, zip, doc, mp4...): không tái cấu trúc được an toàn bằng code ở đây, nên
+     *   chỉ quét chữ ký script/exec phổ biến và từ chối thẳng nếu khớp (chặn được các mẫu đã biết,
+     *   không chắc chặn được biến thể hoàn toàn mới — yếu hơn 2 nhánh trên).
+     */
+    protected function sanitizeContent(string $ext)
+    {
+        if (in_array($ext, $this->rasterImageExtensions)) {
+            $this->reencodeImage();
+        } elseif ($ext === 'svg') {
+            $this->sanitizeSvg();
+        } else {
+            $this->rejectIfContainsPayload();
+        }
+    }
+
+    protected function reencodeImage()
+    {
+        try {
+            // Package này khai báo "intervention/image": "^2.5|^4.0" (xem lib/media/composer.json)
+            // — project nào cài 2.5 vẫn phải chạy được, nên không gọi thẳng API 4.x.
+            // ImageProcessor::isLegacy() detect bằng cách check class Intervention\Image\Constraint
+            // (chỉ tồn tại ở 2.x, bị bỏ ở 4.x) để biết đang chạy trên version nào, cùng cách
+            // MediaServiceProvider.php đã dùng để quyết định có bind ImageManager (4.x) hay không.
+            if (ImageProcessor::isLegacy()) {
+                // Nhánh intervention/image 2.5: Image::make()->encode($format, $quality) rồi
+                // ép (string) để lấy binary đã encode — đây là API 2.x chính thống, giống cách
+                // ImageProcessor::crop() ở trên đã dùng Facades\Image::make() cho nhánh legacy.
+                $image = \Intervention\Image\Facades\Image::make($this->file->getPathname());
+                $contents = (string) $image->encode($this->ext, ImageProcessor::DEFAULT_QUALITY);
+            } else {
+                // Nhánh intervention/image 4.x: API mới (ImageManager::decodePath(),
+                // encodeUsingMediaType(), named argument quality: — cú pháp PHP 8.0+). Chỉ chạy
+                // khi chắc chắn 4.x đang được cài, nên không bao giờ gọi nhầm sang method không
+                // tồn tại ở 2.5.
+                $image = ImageProcessor::createManager()->decodePath($this->file->getPathname());
+                $contents = $image->encodeUsingMediaType($this->mimeType, quality: ImageProcessor::DEFAULT_QUALITY)->toString();
+            }
+        } catch (Throwable $e) {
+            // Ảnh đã qua verifyContentMatchesExtension (getimagesize đọc được) nhưng Intervention
+            // không decode/encode lại được — coi như không đủ tin cậy, từ chối thay vì lưu nguyên bản.
+            throw new UnsupportedFileExtensionException();
+        }
+
+        $this->replaceFileContents($contents);
+    }
+
+    protected function sanitizeSvg()
+    {
+        $contents = file_get_contents($this->file->getPathname());
+
+        if ($contents === false) {
+            throw new UnsupportedFileExtensionException();
+        }
+
+        $contents = preg_replace('#<script\b.*?</script>#is', '', $contents);
+        $contents = preg_replace('#\son\w+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)#i', '', $contents);
+        $contents = preg_replace('#(href|xlink:href)(\s*=\s*)(["\'])\s*javascript:[^"\']*\3#i', '', $contents);
+
+        $this->replaceFileContents($contents);
+    }
+
+    /** Chữ ký script/exec hay gặp trong payload giấu vào file upload (polyglot, EXIF-XSS, PDF-JS...). */
+    protected function rejectIfContainsPayload()
+    {
+        $content = @file_get_contents($this->file->getPathname(), false, null, 0, 2 * 1024 * 1024);
+
+        if (!is_string($content) || $content === '') {
+            return;
+        }
+
+        $patterns = [
+            '/<\?php\b/i',
+            '/<script[\s>]/i',
+            '/<svg\b/i',
+            '/\bon(load|error|click|mouseover|focus|mouseenter)\s*=/i',
+            '/javascript\s*:/i',
+            '/\b(eval|system|shell_exec|passthru|exec|proc_open)\s*\(/i',
+            '#/(JavaScript|JS|OpenAction)\b#',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $content)) {
+                throw new SuspiciousContentException();
+            }
+        }
+    }
+
+    /** Ghi nội dung đã sanitize ra file tạm và thay $this->file bằng file đó trước khi lưu thật. */
+    protected function replaceFileContents(string $contents)
+    {
+        $path = tempnam(sys_get_temp_dir(), 'newnet_media_sanitized_');
+        file_put_contents($path, $contents);
+
+        $this->file = new File($path);
+        $this->size = filesize($path);
+        $this->sanitizedTempPath = $path;
     }
 }
