@@ -45,13 +45,6 @@ return [
         'application' => 'Other'
     ],
 
-    'sort_by' => [
-        'created_at-desc' => 'Date upload decrease',
-        'created_at-asc' => 'Date upload increase',
-        'size-desc' => 'Size less to large',
-        'size-asc' => 'Size large to less'
-    ],
-
     'imageproxy' => [
         'enable' => false,
         'server' => env('MEDIA_IMAGEPROXY_SERVER', 'https://img.cdn2n.net'),
@@ -59,6 +52,19 @@ return [
     ],
 
     'enable_webp' => env('MEDIA_ENABLED_WEBP', true),
+
+    /*
+     * Decode rồi encode lại ảnh raster (png/jpg/jpeg/gif/webp/bmp) lúc upload để loại bỏ mọi
+     * metadata (EXIF, JFIF comment, ICC, XMP...) — chặn payload giấu trong ảnh hợp lệ kiểu
+     * polyglot/EXIF-XSS, kể cả biến thể chưa biết trước (không phải chặn theo signature).
+     * Đánh đổi: mất metadata thật của ảnh (thiết bị chụp, khẩu độ, ngày giờ, GPS...) và tốn thêm
+     * ~0.1-0.3s mỗi lần upload ảnh vài MB. Mặc định TẮT vì package này dùng chung cho nhiều
+     * project (newnetcms/lib) — bật ảnh hưởng hiệu năng/metadata cho mọi nơi dùng chung là không
+     * an toàn nếu không có xác nhận riêng; project nào cần thì tự bật qua .env.
+     * Khi tắt, ảnh vẫn được quét signature script/exec phổ biến (rejectIfContainsPayload) như các
+     * loại file khác — yếu hơn re-encode nhưng không tốn chi phí và không mất metadata.
+     */
+    'reencode_on_upload' => env('MEDIA_REENCODE_ON_UPLOAD', false),
 
     'accept_upload_extension' => [
         'png', 'jpg', 'jpeg', 'gif', 'webp', 'heic', 'heif', 'svg',

@@ -1,8 +1,7 @@
 @extends('core::admin.master')
 
-@assetadd('my-script', 'vendor/media/js/admin/custom.js', ['jquery'])
-
-@assetadd('my-script', 'vendor/media/css/admin/custom.css')
+@assetadd('media-admin-css', asset('vendor/media/css/admin/media-manager.css'))
+@assetadd('media-admin-js', asset('vendor/media/js/admin/media-manager.js'), ['jquery'])
 
 @section('meta_title', __('media::media.index.page_title'))
 
@@ -10,55 +9,68 @@
 
 @section('page_subtitle', __('media::media.index.page_subtitle'))
 
+{{-- Bỏ content-header (breadcrumb + page-title) để trang gọn hơn, có thêm chỗ
+     cho sidebar/grid mà không cần cuộn cả trang. --}}
+@section('content-header')
+@endsection
+
 @section('content')
-    <div class="card mb-4">
-        <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="fs-17 font-weight-600 mb-0">
-                        {{ __('media::media.index.page_title') }}
-                        <a href="#" id="addFile" style="color: blue">Add file</a>
-                    </h6>
+    <script>
+        window.mediaManagerConfig = {
+            indexUrl: @json(route('media.admin.media.index')),
+            uploadUrl: @json(route('media.admin.media.storeAjax')),
+            bulkDestroyUrl: @json(route('media.admin.media.bulk_destroy')),
+            bulkDownloadUrl: @json(route('media.admin.media.bulk_download')),
+            resourceUrlBase: @json(url(config('core.admin_prefix') . '/media')),
+            acceptExtensions: @json(config('cms.media.accept_upload_extension')),
+            mode: @json($filters['mode'] ?? 'grid'),
+            pagination: @json($pagination),
+            lang: {
+                selected: @json(__('media::media.bulk.selected', ['count' => ':count'])),
+                selectAtLeastOne: @json(__('media::media.notification.select_at_least_one')),
+                copyUrlSuccess: @json(__('media::media.notification.copy_url_success')),
+                updateSuccess: @json(__('media::media.notification.updated')),
+                uploadError: @json(__('media::media.upload.error')),
+                noUsage: @json(__('media::media.detail.no_usage')),
+                deleteTitle: @json(__('media::media.confirm.delete_title')),
+                deleteText: @json(__('media::media.confirm.delete_text')),
+                deleteYes: @json(__('media::media.confirm.yes')),
+                deleteNo: @json(__('media::media.confirm.no')),
+                loadingMore: @json(__('media::media.loading_more')),
+                statsShowing: @json(__('media::media.stats.showing', ['loaded' => ':loaded', 'total' => ':total'])),
+            },
+        };
+    </script>
+
+    <div class="media-app" id="mediaApp">
+        @admincan('media.admin.media.create')
+            <div class="media-drop-overlay" id="mediaDropOverlay">
+                <div class="media-drop-overlay__inner">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <div>{{ __('media::media.upload.drop_hint') }}</div>
+                    <div class="media-drop-overlay__hint">{{ config('cms.media.messageMax') }}</div>
                 </div>
             </div>
-        </div>
-        <form id="upload-form" enctype="multipart/form-data" action="{{route('media.admin.media.store')}}" method="POST">
-            @csrf
-            <div class="card-body">
+        @endadmincan
 
-                @include('media::admin.layouts.upload-image')
+        @include('media::admin.partials.sidebar', ['sidebar' => $sidebar])
 
-                <div class="row">
+        <main class="media-main">
+            @include('media::admin.partials.toolbar', [
+                'filters' => $filters,
+                'sortOptions' => $sortOptions,
+                'activeChips' => $activeChips,
+            ])
 
-                    @include('media::admin.layouts.view-system')
+            <div id="mediaUploadList" class="media-upload-list"></div>
 
-                    @include('media::admin.layouts.search-model')
-
-                    @include('media::admin.layouts.search-type')
-
-                    @include('media::admin.layouts.sort')
-
-                    @include('media::admin.layouts.search-day')
-
-                    @include('media::admin.layouts.search-name')
-
-                </div>
-                <input type="hidden" value="{{request()->mode}}" name="mode" id="mode">
-                <div class="row viewImage">
-                    @if (request()->mode == 'list')
-                        @include('media::admin.layouts.listview')
-                    @else
-                        @include('media::admin.layouts.gridview')
-                    @endif
-                </div>
-
-                <br>
-                {{ $medias->appends(Request::all())->render() }}
+            <div id="mediaListContainer">
+                @include('media::admin.partials.media-grid', ['medias' => $medias, 'mode' => $filters['mode'] ?? 'grid'])
             </div>
-        </form>
+
+            {!! $statsView !!}
+        </main>
     </div>
 
-    @include('media::admin.modals.edit-modal')
-
-    @include('media::admin.modals.delete-modal')
+    @include('media::admin.partials.detail-drawer')
 @stop

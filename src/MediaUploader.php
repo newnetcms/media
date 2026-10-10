@@ -299,7 +299,14 @@ class MediaUploader
     protected function sanitizeContent(string $ext)
     {
         if (in_array($ext, $this->rasterImageExtensions)) {
-            $this->reencodeImage();
+            // cms.media.reencode_on_upload: mặc định TẮT (xem comment trong lib/media/config/media.php
+            // lý do default false). Khi tắt, ảnh vẫn được quét signature như nhánh else bên dưới,
+            // chỉ là không decode/encode lại nên không tốn thêm CPU và không mất metadata thật.
+            if (config('cms.media.reencode_on_upload')) {
+                $this->reencodeImage();
+            } else {
+                $this->rejectIfContainsPayload();
+            }
         } elseif ($ext === 'svg') {
             $this->sanitizeSvg();
         } else {
@@ -320,6 +327,15 @@ class MediaUploader
                 // ép (string) để lấy binary đã encode — đây là API 2.x chính thống, giống cách
                 // ImageProcessor::crop() ở trên đã dùng Facades\Image::make() cho nhánh legacy.
                 $image = \Intervention\Image\Facades\Image::make($this->file->getPathname());
+
+                // QUAN TRỌNG: ảnh điện thoại thường lưu pixel THEO CHIỀU NGANG kèm thẻ EXIF
+                // Orientation báo "xoay X độ khi hiển thị" (ví dụ ảnh chụp dọc vẫn lưu pixel ngang
+                // + Orientation=6), chứ không xoay sẵn pixel. Bước encode lại bên dưới xoá MỌI EXIF
+                // (kể cả Orientation) để diệt payload ẩn — nên phải orientate() để xoay/lật pixel
+                // thật theo đúng Orientation TRƯỚC khi xoá, nếu không ảnh đúng chiều sẽ bị lưu lại
+                // thành ảnh nằm sai chiều vĩnh viễn (đã test thực tế thấy lỗi này trước khi thêm dòng này).
+                $image->orientate();
+
                 $contents = (string) $image->encode($this->ext, ImageProcessor::DEFAULT_QUALITY);
             } else {
                 // Nhánh intervention/image 4.x: API mới (ImageManager::decodePath(),
@@ -327,6 +343,12 @@ class MediaUploader
                 // khi chắc chắn 4.x đang được cài, nên không bao giờ gọi nhầm sang method không
                 // tồn tại ở 2.5.
                 $image = ImageProcessor::createManager()->decodePath($this->file->getPathname());
+
+                // Tương tự nhánh legacy ở trên (xem comment đầy đủ phía trên): bake EXIF Orientation
+                // vào pixel thật trước khi encode lại, vì encodeUsingMediaType() sẽ xoá mọi metadata.
+                // 4.x gọi method này là orient() (không phải orientate() như 2.x).
+                $image->orient();
+
                 $contents = $image->encodeUsingMediaType($this->mimeType, quality: ImageProcessor::DEFAULT_QUALITY)->toString();
             }
         } catch (Throwable $e) {

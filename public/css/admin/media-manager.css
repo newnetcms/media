@@ -1,0 +1,1011 @@
+/*
+ * Bảng màu/kiểu chữ bám theo giao diện admin gốc: chữ #353c4e, nền #f3f3f3,
+ * viền #e4e5e7, primary #007bff (Bootstrap mặc định đang dùng cho .btn-primary
+ * toàn hệ thống), font kế thừa 'Nunito Sans' đã load sẵn ở body toàn admin
+ * (không khai báo lại font-family ở đây).
+ */
+
+.media-app {
+    display: flex;
+    align-items: stretch;
+    position: relative;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 1px 20px 0 rgba(69, 90, 100, .08);
+    overflow: hidden;
+    /* Trừ đi chiều cao navbar + các phần tử phía trên card để vừa khít
+       viewport, không phải cuộn cả trang. */
+    height: calc(100vh - 155px);
+}
+
+/* ---------------------------------------------------------------- */
+/* Kéo-thả file lên toàn bộ card                                     */
+/* ---------------------------------------------------------------- */
+.media-drop-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 123, 255, .06);
+    border: 2px dashed #007bff;
+    border-radius: 6px;
+    pointer-events: none;
+}
+
+.media-app.is-drag-over .media-drop-overlay {
+    display: flex;
+}
+
+.media-drop-overlay__inner {
+    text-align: center;
+    color: #007bff;
+    font-weight: 700;
+}
+
+.media-drop-overlay__inner i {
+    font-size: 28px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.media-drop-overlay__hint {
+    font-size: 12px;
+    font-weight: 500;
+    color: #5b9df2;
+    margin-top: 4px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Sidebar                                                           */
+/* ---------------------------------------------------------------- */
+.media-sidebar {
+    flex: 0 0 240px;
+    width: 240px;
+    height: 100%;
+    border-right: 1px solid #e4e5e7;
+    padding: 20px 12px;
+    overflow-y: auto;
+}
+
+.media-sidebar__section {
+    margin-bottom: 22px;
+}
+
+.media-sidebar__heading {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #8a93a6;
+    padding: 0 10px;
+    margin-bottom: 6px;
+}
+
+.media-sidebar__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    border-radius: 5px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #353c4e;
+    text-decoration: none;
+}
+
+.media-sidebar__link:hover {
+    background: #f3f3f3;
+    color: #353c4e;
+}
+
+.media-sidebar__link.is-active {
+    background: #e7f1ff;
+    color: #007bff;
+}
+
+.media-sidebar__link--sub {
+    padding-left: 22px;
+    font-weight: 500;
+}
+
+.media-sidebar__toggle {
+    margin-bottom: 4px;
+}
+
+.media-sidebar__count {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #b0b7c3;
+}
+
+.media-sidebar__link.is-active .media-sidebar__count {
+    color: #007bff;
+}
+
+.media-sidebar__year-toggle {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #8a93a6;
+    cursor: pointer;
+}
+
+.media-sidebar__year-toggle i {
+    font-size: 10px;
+    width: 10px;
+}
+
+.media-sidebar__storage {
+    padding: 12px;
+    border-radius: 8px;
+    background: #fafbfc;
+    border: 1px solid #eaecf0;
+}
+
+.media-sidebar__storage-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 700;
+    color: #8a93a6;
+}
+
+/* ---------------------------------------------------------------- */
+/* Main / toolbar                                                    */
+/* ---------------------------------------------------------------- */
+/*
+ * .media-main là flex column: phần header (toolbar/chip/bulk/upload) và
+ * .media-stats-bar giữ nguyên kích thước tự nhiên, chỉ #mediaListContainer
+ * (flex:1 + overflow-y:auto) cuộn bên trong — nhờ vậy thanh thống kê LUÔN nằm
+ * đúng ở đáy card dù danh sách ít hay nhiều item, không cần position:sticky
+ * (sticky chỉ "dính đáy" khi nội dung đủ dài để tạo scroll, nên danh sách ít
+ * item trước đây làm thanh thống kê trôi lên giữa, để trống khoảng trắng bên dưới).
+ */
+.media-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 20px 24px 0;
+}
+
+#mediaListContainer {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.media-stats-bar {
+    flex: 0 0 auto;
+    margin: 16px -24px 0;
+    padding: 10px 24px;
+    background: #fafbfc;
+    border-top: 1px solid #eaecf0;
+    font-size: 12.5px;
+    color: #5b5a55;
+}
+
+.media-stats-bar strong {
+    color: #353c4e;
+}
+
+.media-stats-bar__sep {
+    margin: 0 8px;
+    color: #d7d5cc;
+}
+
+/*
+ * .media-toolbar bọc 2 trạng thái (.media-toolbar__row mặc định và
+ * .media-toolbar__bulk khi có chọn item) — chỉ 1 trong 2 hiện ra, đổi nội
+ * dung chứ không chèn thêm dòng, để chọn/bỏ chọn item không đẩy danh sách
+ * bên dưới nhảy lên/xuống.
+ */
+.media-toolbar {
+    margin-bottom: 12px;
+}
+
+.media-toolbar__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-height: 38px;
+}
+
+.media-toolbar__search {
+    position: relative;
+    flex: 1 1 260px;
+    max-width: 380px;
+}
+
+.media-toolbar__search i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #b0b7c3;
+    font-size: 13px;
+}
+
+.media-toolbar__search input {
+    width: 100%;
+    padding: 8px 12px 8px 34px;
+    border: 1px solid #e4e5e7;
+    border-radius: 6px;
+    font-size: 13.5px;
+}
+
+.media-toolbar__search input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 .15rem rgba(0, 123, 255, .15);
+}
+
+.media-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #e4e5e7;
+    border-radius: 6px;
+    background: #fff;
+    color: #8a93a6;
+    cursor: pointer;
+}
+
+.media-icon-btn:hover,
+.media-icon-btn[aria-expanded="true"] {
+    background: #e7f1ff;
+    color: #007bff;
+    border-color: #e7f1ff;
+}
+
+/* Bỏ viền focus mặc định của trình duyệt khi bấm chuột (xấu, không khớp style
+   bo tròn hiện tại) nhưng vẫn giữ lại khi điều hướng bằng bàn phím (:focus-visible)
+   để không mất hẳn chỉ dấu focus cho người dùng gõ Tab. */
+.media-icon-btn:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.media-icon-btn:focus-visible {
+    outline: 2px solid #007bff;
+    outline-offset: 1px;
+}
+
+.media-sort-dropdown .dropdown-menu {
+    min-width: 220px;
+    padding: 6px;
+    font-size: 13px;
+}
+
+.media-sort-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 5px;
+    padding: 8px 10px;
+    color: #353c4e;
+}
+
+.media-sort-option i {
+    width: 14px;
+    color: #8a93a6;
+    text-align: center;
+}
+
+.media-sort-option.active,
+.media-sort-option:active {
+    background: #e7f1ff;
+    color: #007bff;
+}
+
+.media-sort-option.active i {
+    color: #007bff;
+}
+
+.media-toolbar__right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.media-toolbar__view-toggle {
+    display: flex;
+    border: 1px solid #e4e5e7;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.media-toolbar__view-toggle button {
+    border: none;
+    background: #fff;
+    padding: 7px 11px;
+    color: #8a93a6;
+    cursor: pointer;
+}
+
+.media-toolbar__view-toggle button + button {
+    border-left: 1px solid #e4e5e7;
+}
+
+.media-toolbar__view-toggle button:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.media-toolbar__view-toggle button:focus-visible {
+    outline: 2px solid #007bff;
+    outline-offset: -2px;
+}
+
+.media-toolbar__view-toggle button.is-active {
+    background: #e7f1ff;
+    color: #007bff;
+}
+
+.media-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.media-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #e7f1ff;
+    color: #007bff;
+    border-radius: 20px;
+    padding: 5px 9px 5px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.media-chip i {
+    font-size: 10px;
+}
+
+.media-chip--clear-all {
+    background: #f3f3f3;
+    color: #5b5a55;
+}
+
+/* ---------------------------------------------------------------- */
+/* Upload: progress list (dropzone giờ là toàn bộ .media-app, xem      */
+/* .media-drop-overlay ở trên)                                        */
+/* ---------------------------------------------------------------- */
+.media-upload-list {
+    margin-bottom: 14px;
+}
+
+.media-upload-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 13px;
+}
+
+.media-upload-item__name {
+    flex: 0 0 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.media-upload-item__bar {
+    flex: 1;
+    height: 6px;
+    background: #eaecf0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.media-upload-item__bar-fill {
+    height: 100%;
+    width: 0;
+    background: #007bff;
+    transition: width .2s ease;
+}
+
+.media-upload-item.is-error .media-upload-item__bar-fill {
+    background: #dc3545;
+}
+
+.media-upload-item.is-done .media-upload-item__bar-fill {
+    background: #28a745;
+}
+
+/* ---------------------------------------------------------------- */
+/* Bulk toolbar — thế chỗ .media-toolbar__row mặc định khi có chọn item */
+/* ---------------------------------------------------------------- */
+.media-toolbar__bulk {
+    gap: 14px;
+    padding: 0 14px;
+    background: #353c4e;
+    border-radius: 6px;
+}
+
+.media-toolbar__bulk-count {
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.media-toolbar__bulk-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------------- */
+/* Buttons                                                            */
+/* ---------------------------------------------------------------- */
+.media-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #e4e5e7;
+    background: #fff;
+    color: #353c4e;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.media-btn:hover {
+    border-color: #c9ced6;
+    color: #353c4e;
+}
+
+.media-btn--sm {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.media-btn--primary {
+    background: #007bff;
+    border-color: #007bff;
+    color: #fff;
+}
+
+.media-btn--primary:hover {
+    background: #0069d9;
+    border-color: #0062cc;
+    color: #fff;
+}
+
+.media-btn--danger {
+    background: #fff;
+    border-color: #f5c2c7;
+    color: #dc3545;
+}
+
+.media-btn--danger:hover {
+    background: #fbeaec;
+    color: #dc3545;
+}
+
+.media-btn--link {
+    border: none;
+    background: none;
+    color: #8a93a6;
+    padding: 6px 4px;
+}
+
+/* On the dark bulk toolbar, buttons need a lighter base */
+.media-toolbar__bulk .media-btn {
+    background: rgba(255, 255, 255, .08);
+    border-color: transparent;
+    color: #fff;
+}
+
+.media-toolbar__bulk .media-btn--danger {
+    background: #dc3545;
+    color: #fff;
+}
+
+.media-toolbar__bulk .media-btn--link {
+    color: #c3c8d4;
+}
+
+/* ---------------------------------------------------------------- */
+/* Grid / list items                                                  */
+/* ---------------------------------------------------------------- */
+.media-items--grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 14px;
+}
+
+.media-items--grid .media-item {
+    position: relative;
+    border: 1.5px solid #eaecf0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.media-items--grid .media-item.is-selected {
+    border-color: #007bff;
+}
+
+.media-items--grid .media-item__preview {
+    display: block;
+    height: 110px;
+    background: #f3f3f3;
+}
+
+.media-items--grid .media-item__preview img,
+.media-items--grid .media-item__preview .media-file-type-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.media-items--grid .media-item__info {
+    padding: 8px 10px;
+}
+
+.media-items--grid .media-item__select {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 2;
+    margin: 0;
+}
+
+.media-items--list .media-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 4px;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.media-items--list .media-item.is-selected {
+    background: #f5f9ff;
+}
+
+.media-items--list .media-item__preview {
+    display: block;
+    flex: 0 0 48px;
+    height: 48px;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.media-items--list .media-item__preview img,
+.media-items--list .media-item__preview .media-file-type-preview {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+}
+
+.media-items--list .media-item__select {
+    flex: 0 0 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/*
+ * Checkbox tuỳ chỉnh thay cho ô vuông mặc định của trình duyệt (vốn mỗi trình
+ * duyệt/hệ điều hành vẽ một kiểu, không khớp với bo góc/màu primary #007bff
+ * đang dùng xuyên suốt trang). Vẽ dấu check bằng border xoay 45° thay vì icon
+ * ngoài, giữ nguyên hành vi checkbox gốc (click/keyboard/form value) nên không
+ * cần đổi gì ở JS.
+ */
+.media-item-checkbox {
+    -webkit-appearance: none;
+    appearance: none;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    border: 1.5px solid #d7d5cc;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    position: relative;
+    transition: background-color .12s ease, border-color .12s ease;
+}
+
+.media-item-checkbox:hover {
+    border-color: #007bff;
+}
+
+.media-item-checkbox:checked {
+    background: #007bff;
+    border-color: #007bff;
+}
+
+.media-item-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.media-item-checkbox:focus-visible {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+.media-items--list .media-item__info {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Các cột thông tin thêm ở chế độ list (loại file/kích thước/ngày/người tải
+   lên/dùng ở đâu) — trước đây khoảng trống bên phải tên file bị bỏ trống, giờ
+   tận dụng để hiện thêm thông tin hữu ích thay vì phải mở Chi tiết file. */
+.media-item__col {
+    flex: 0 0 auto;
+    font-size: 12px;
+    color: #8a93a6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.media-item__col--type {
+    width: 54px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.media-item__col--size {
+    width: 76px;
+}
+
+.media-item__col--date {
+    width: 92px;
+}
+
+.media-item__col--author {
+    width: 130px;
+}
+
+.media-item__col--usage {
+    width: 150px;
+}
+
+.media-item__usage-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #f3f3f3;
+    color: #5b5a55;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.media-item--head {
+    border-bottom: 2px solid #e4e5e7 !important;
+    cursor: default;
+}
+
+.media-item--head:hover {
+    background: none;
+}
+
+.media-item--head .media-item__info,
+.media-item--head .media-item__col {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: .03em;
+    color: #8a93a6;
+}
+
+.media-item__name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #353c4e;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.media-item__name:hover {
+    color: #007bff;
+}
+
+.media-item__meta {
+    font-size: 11px;
+    color: #8a93a6;
+}
+
+.media-item__filename {
+    font-size: 11px;
+    color: #b0b7c3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.media-file-type-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #8a93a6;
+    background: #eef1f5;
+}
+
+.media-file-type-preview .media-file-ext {
+    font-size: 10px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+
+.media-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #b0b7c3;
+}
+
+.media-loading-more {
+    text-align: center;
+    padding: 16px 0 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #8a93a6;
+}
+
+/* ---------------------------------------------------------------- */
+/* Detail drawer                                                      */
+/* ---------------------------------------------------------------- */
+.media-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(53, 60, 78, .35);
+    z-index: 1040;
+    display: none;
+}
+
+.media-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: 400px;
+    max-width: 92vw;
+    background: #fff;
+    box-shadow: -8px 0 28px rgba(53, 60, 78, .18);
+    z-index: 1041;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform .2s ease;
+}
+
+.media-drawer-backdrop.is-open,
+.media-drawer.is-open {
+    display: flex;
+}
+
+.media-drawer-backdrop.is-open {
+    display: block;
+}
+
+.media-drawer.is-open {
+    transform: translateX(0);
+}
+
+.media-drawer__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.media-drawer__title {
+    font-weight: 700;
+    font-size: 14.5px;
+    color: #353c4e;
+}
+
+.media-drawer__close {
+    border: none;
+    background: none;
+    color: #8a93a6;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.media-drawer__body {
+    padding: 18px 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.media-drawer__footer {
+    display: flex;
+    gap: 8px;
+    padding: 14px 20px;
+    border-top: 1px solid #eaecf0;
+    flex-wrap: wrap;
+}
+
+.media-drawer__footer .media-btn {
+    flex: 1;
+    justify-content: center;
+}
+
+.media-detail-preview {
+    height: 180px;
+    border-radius: 8px;
+    background: #f3f3f3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.media-detail-preview img,
+.media-detail-preview video {
+    max-width: 100%;
+    max-height: 180px;
+}
+
+.media-detail-preview img {
+    cursor: pointer;
+}
+
+.media-detail-dimensions {
+    font-size: 11.5px;
+    color: #8a93a6;
+    text-align: center;
+    margin-bottom: 14px;
+}
+
+.media-detail-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 14px;
+    font-size: 12px;
+    margin-bottom: 16px;
+}
+
+.media-detail-meta dt {
+    color: #8a93a6;
+    margin-bottom: 2px;
+}
+
+.media-detail-meta dd {
+    font-weight: 700;
+    color: #353c4e;
+    margin: 0;
+}
+
+.media-detail-meta--full {
+    grid-column: 1 / -1;
+}
+
+.media-detail-meta--full dd {
+    word-break: break-all;
+}
+
+.media-detail-usage__heading {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #8a93a6;
+}
+
+.media-field {
+    margin-bottom: 12px;
+}
+
+.media-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #8a93a6;
+    margin-bottom: 4px;
+}
+
+.media-field input,
+.media-field textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #e4e5e7;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.media-field input:focus,
+.media-field textarea:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.media-detail-saved {
+    margin-left: 8px;
+    color: #28a745;
+}
+
+.media-detail-usage {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #eaecf0;
+}
+
+.media-detail-usage ul {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0;
+}
+
+.media-detail-usage li {
+    font-size: 12.5px;
+    color: #353c4e;
+    padding: 4px 0;
+}
+
+.media-detail-usage .text-muted {
+    color: #b0b7c3;
+}
+
+@media (max-width: 860px) {
+    /* Màn hẹp: sidebar xếp trên main, không ép chiều cao/cuộn riêng nữa —
+       để cả trang cuộn tự nhiên như bình thường. */
+    .media-app {
+        flex-wrap: wrap;
+        height: auto;
+    }
+
+    .media-sidebar {
+        height: auto;
+        overflow-y: visible;
+        width: 100%;
+        flex: 1 1 100%;
+        border-right: none;
+        border-bottom: 1px solid #e4e5e7;
+    }
+
+    .media-main {
+        height: auto;
+        overflow: visible;
+    }
+
+    #mediaListContainer {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: visible;
+    }
+}

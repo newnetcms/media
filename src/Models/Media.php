@@ -125,6 +125,21 @@ class Media extends Model
     }
 
     /**
+     * Ảnh có hiển thị được trực tiếp qua thẻ <img> trên trình duyệt hay không.
+     * Không chỉ dựa vào mime_type (có thể bị lưu sai khi upload — ví dụ 1 file
+     * .dat vẫn có thể có mime_type kiểu "image/..." — nên phải khớp luôn đuôi
+     * file nằm trong danh sách định dạng raster/vector trình duyệt hiển thị
+     * được). HEIC/HEIF tuy mime_type là image/* nhưng phần lớn trình duyệt
+     * (trừ Safari) không render được qua <img src>, nên cũng loại khỏi đây.
+     */
+    public function isDisplayableImage(): bool
+    {
+        $displayableExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+
+        return $this->isOfType('image') && in_array(Str::lower($this->extension), $displayableExtensions, true);
+    }
+
+    /**
      * Get the url to the file.
      *
      * @param  string  $conversion
@@ -237,5 +252,54 @@ class Media extends Model
         }
 
         return $this->attrs['ver2'] ?? false;
+    }
+
+    /**
+     * Kích thước file dạng người đọc được (KB/MB/GB).
+     */
+    public function getHumanSizeAttribute()
+    {
+        return static::humanSize((int) $this->size);
+    }
+
+    public static function humanSize(int $size): string
+    {
+        if ($size <= 0) {
+            return '0 KB';
+        }
+
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $power = min((int) floor(log($size, 1024)), count($units) - 1);
+
+        return round($size / (1024 ** $power), $power > 0 ? 1 : 0) . ' ' . $units[$power];
+    }
+
+    /**
+     * Kích thước ảnh [width, height], null nếu không phải ảnh hoặc không đọc được
+     * (vd: disk không hỗ trợ đọc trực tiếp từ path như S3).
+     */
+    public function getDimensionsAttribute()
+    {
+        if (!$this->isOfType('image')) {
+            return null;
+        }
+
+        try {
+            $size = getimagesize($this->getFullPath());
+        } catch (\Throwable $exception) {
+            return null;
+        }
+
+        return $size ? ['width' => $size[0], 'height' => $size[1]] : null;
+    }
+
+    public function getAltAttribute()
+    {
+        return $this->attrs['alt'] ?? '';
+    }
+
+    public function getCaptionAttribute()
+    {
+        return $this->attrs['caption'] ?? '';
     }
 }
