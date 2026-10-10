@@ -51,6 +51,13 @@ return [
         'list' => 'Dạng danh sách',
     ],
 
+    // Modal "File manager" (form.media) — dùng chung cho rất nhiều form khác
+    // (@mediamanager/@gallery), tách riêng khỏi các nhóm trên vì trang Danh
+    // sách media (admin/index.blade.php) không dùng các key này.
+    'picker' => [
+        'title' => 'Quản lý tệp',
+    ],
+
     'list' => [
         'type' => 'Loại',
         'size' => 'Kích thước',
@@ -71,6 +78,8 @@ return [
         'title' => 'Thêm file',
         'drop_hint' => 'Thả file vào đây để tải lên',
         'error' => 'Upload thất bại',
+        'unsupported_type' => 'Định dạng file không được phép',
+        'single_only' => 'Chỉ được tải lên 1 file cho mục này',
     ],
 
     'bulk' => [

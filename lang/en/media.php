@@ -51,6 +51,13 @@ return [
         'list' => 'List view',
     ],
 
+    // "File manager" picker modal (form.media) — reused by many other forms
+    // (@mediamanager/@gallery), kept separate from the groups above since the
+    // media list page (admin/index.blade.php) doesn't use these keys.
+    'picker' => [
+        'title' => 'File manager',
+    ],
+
     'list' => [
         'type' => 'Type',
         'size' => 'Size',
@@ -71,6 +78,8 @@ return [
         'title' => 'Add file',
         'drop_hint' => 'Drop files here to upload',
         'error' => 'Upload failed',
+        'unsupported_type' => 'File type not allowed',
+        'single_only' => 'Only one file can be uploaded here',
     ],
 
     'bulk' => [

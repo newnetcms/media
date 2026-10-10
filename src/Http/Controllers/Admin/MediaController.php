@@ -7,7 +7,9 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
-use Newnet\Media\Helpers\MediaHelper;
+use Newnet\Media\Exceptions\SuspiciousContentException;
+use Newnet\Media\Exceptions\UnsupportedFileExtensionException;
+use Newnet\Media\Facades\Img;
 use Newnet\Media\MediaUploader;
 use Newnet\Media\Models\Media;
 use Newnet\Media\Models\Mediable;
@@ -105,7 +107,10 @@ class MediaController extends Controller
 
         foreach (array_slice($sidebar['quickViews'], 1) as $view) {
             if ($view['active']) {
-                $chips[] = ['label' => $view['label'], 'clearUrl' => $this->filterUrl(['type' => 'all'], $filters)];
+                // 'clearFilter' = chiều lọc cần bỏ khi bấm chip — picker modal
+                // (form.media) dùng key này để tự reset đúng biến filter rồi
+                // gọi lại AJAX, thay vì theo clearUrl (điều hướng cả trang).
+                $chips[] = ['label' => $view['label'], 'clearUrl' => $this->filterUrl(['type' => 'all'], $filters), 'clearFilter' => 'type'];
             }
         }
 
@@ -115,6 +120,7 @@ class MediaController extends Controller
                     $chips[] = [
                         'label' => $group['year'] . ' - ' . $month['label'],
                         'clearUrl' => $this->filterUrl(['month' => null], $filters),
+                        'clearFilter' => 'month',
                     ];
                 }
             }
@@ -125,6 +131,7 @@ class MediaController extends Controller
                 $chips[] = [
                     'label' => __('media::media.sidebar.by_usage') . ': ' . $model['label'],
                     'clearUrl' => $this->filterUrl(['model' => 'all'], $filters),
+                    'clearFilter' => 'model',
                 ];
             }
         }
@@ -133,6 +140,7 @@ class MediaController extends Controller
             $chips[] = [
                 'label' => $sidebar['unattachedToggle']['label'],
                 'clearUrl' => $this->filterUrl(['unattached' => null], $filters),
+                'clearFilter' => 'unattached',
             ];
         }
 
@@ -141,6 +149,7 @@ class MediaController extends Controller
                 'label' => __('media::media.filter.clear_all'),
                 'clearUrl' => $this->clearAllFiltersUrl($filters),
                 'isClearAll' => true,
+                'clearFilter' => 'all',
             ];
         }
 
@@ -185,13 +194,19 @@ class MediaController extends Controller
 
         $quickViews = array_map(function ($def) use ($filters) {
             $active = $filters['type'] === $def['value'];
+            // "Tất cả" luôn trỏ về type=all; các loại khác bấm lại để bỏ chọn (toggle).
+            $toggledType = $def['value'] === 'all' ? 'all' : ($active ? 'all' : $def['value']);
 
             return [
                 'label' => $def['label'],
                 'count' => $def['count'],
                 'active' => $def['value'] === 'all' ? $filters['type'] === 'all' : $active,
-                // "Tất cả" luôn trỏ về type=all; các loại khác bấm lại để bỏ chọn (toggle).
-                'url' => $this->filterUrl(['type' => $def['value'] === 'all' ? 'all' : ($active ? 'all' : $def['value'])], $filters),
+                // 'value' = type sẽ áp dụng nếu bấm vào mục này — picker modal
+                // (form.media) dùng key này qua data-value thay cho href, vì
+                // click trong modal chỉ nên cập nhật bộ lọc + gọi lại AJAX chứ
+                // không điều hướng rời trang form đang sửa.
+                'value' => $toggledType,
+                'url' => $this->filterUrl(['type' => $toggledType], $filters),
             ];
         }, $typeDefs);
 
@@ -199,6 +214,7 @@ class MediaController extends Controller
             'label' => __('media::media.sidebar.all'),
             'count' => $totalCount,
             'active' => !$filters['month'],
+            'value' => null,
             'url' => $this->filterUrl(['month' => null], $filters),
         ];
 
@@ -209,12 +225,14 @@ class MediaController extends Controller
                 $yearGroups[$year] = ['year' => $year, 'months' => []];
             }
             $active = $filters['month'] === $monthKey;
+            $toggledMonth = $active ? null : $monthKey;
             $yearGroups[$year]['months'][] = [
                 'key' => $monthKey,
                 'label' => __('media::media.sidebar.month') . ' ' . (int) $monthNum,
                 'count' => $count,
                 'active' => $active,
-                'url' => $this->filterUrl(['month' => $active ? null : $monthKey], $filters),
+                'value' => $toggledMonth,
+                'url' => $this->filterUrl(['month' => $toggledMonth], $filters),
             ];
         }
 
@@ -236,19 +254,22 @@ class MediaController extends Controller
             'label' => __('media::media.sidebar.all'),
             'count' => $totalCount,
             'active' => $filters['model'] === 'all' && !$unattachedActive,
+            'value' => 'all',
             'url' => $this->filterUrl(['model' => 'all', 'unattached' => null], $filters),
         ];
 
         $modelList = [];
         foreach ($stats['modelCounts'] as $modelType => $count) {
             $active = $filters['model'] === $modelType;
+            $toggledModel = $active ? 'all' : $modelType;
             $modelList[] = [
                 'label' => class_basename($modelType),
                 'count' => $count,
                 'active' => $active,
+                'value' => $toggledModel,
                 // Model và "chưa gắn vào đâu" loại trừ nhau (đối nghịch về nghĩa),
                 // nên chọn model thì luôn bỏ unattached, bất kể unattached có đang bật hay không.
-                'url' => $this->filterUrl(['model' => $active ? 'all' : $modelType, 'unattached' => null], $filters),
+                'url' => $this->filterUrl(['model' => $toggledModel, 'unattached' => null], $filters),
             ];
         }
 
@@ -256,6 +277,7 @@ class MediaController extends Controller
             'label' => __('media::media.sidebar.unattached'),
             'count' => $stats['unattachedCount'],
             'active' => $unattachedActive,
+            'value' => $unattachedActive ? 0 : 1,
             'url' => $this->filterUrl([
                 'unattached' => $unattachedActive ? null : 1,
                 'model' => 'all',
@@ -559,44 +581,93 @@ class MediaController extends Controller
         return response()->json($data);
     }
 
-    public function ajaxMedia(Request $request, MediaHelper $mediaHelper){
-        $medias = $this->mediaRepository->paginate(20);
-        $mediables = $this->mediableRepositoryInterace->getAll();
-        $allMonths = $mediaHelper->handleRemoveDuplicate($medias, 'created_at', true);
-        $mediables = $mediaHelper->handleRemoveDuplicate($mediables, 'mediable_type', false);
+    public function ajaxMedia(Request $request){
+        // Dùng chung filter()/buildSidebarData() với trang Danh sách media, để
+        // picker modal hỗ trợ search/sort/sidebar (loại file, theo tháng, theo
+        // nơi sử dụng) mà không cần viết lại logic lọc/đếm.
+        $month = $request->input('month');
+        [$dateFrom, $dateTo] = $month ? $this->monthBounds($month) : [null, null];
+
+        $filters = [
+            'name' => $request->input('name'),
+            'type' => $request->input('type') ?: 'all',
+            'model' => $request->input('model') ?: 'all',
+            'month' => $month,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'unattached' => $request->boolean('unattached'),
+            'sort_field' => $request->input('sort_field'),
+            'sort_dir' => $request->input('sort_dir'),
+        ];
+        $medias = $this->mediaRepository->filter($filters, 20);
 
         $mode = $request->mode;
         $view = view("media::form.result",compact('medias', 'mode'))->render();
-        return response()->json(['result' => $view, 'status' => 'C200']);
+        $response = [
+            'result' => $view,
+            'status' => 'C200',
+            // Để JS biết còn trang kế tiếp hay không — vừa tránh gọi thêm trang
+            // rỗng khi cuộn, vừa để tự tải thêm nếu trang đầu chưa đủ dài tạo
+            // scrollbar (modal mở lần đầu, màn hình cao) — xem maybeFillViewport().
+            'hasMore' => $medias->hasMorePages(),
+            'nextPage' => $medias->currentPage() + 1,
+        ];
+
+        // Sidebar + chip row chỉ cần render lại khi đổi bộ lọc (không phải khi
+        // cuộn tải thêm trang cùng 1 bộ lọc) — JS chỉ gửi with_sidebar=1 cho reloadImg().
+        if ($request->boolean('with_sidebar')) {
+            $sidebar = $this->buildSidebarData($filters);
+            $response['sidebar'] = view('media::form.partials.picker-sidebar', compact('sidebar'))->render();
+
+            $activeChips = $this->activeFilterChips($sidebar, $filters);
+            $response['chips'] = view('media::form.partials.picker-chip-row', compact('activeChips'))->render();
+        }
+
+        return response()->json($response);
 
     }
 
+    /**
+     * Upload 1 file mỗi request (cả trang Danh sách media lẫn modal picker đều
+     * gửi từng file một). Lỗi trả JSON 422 thay vì redirect — redirect bị XHR
+     * tự đi theo thành 200 nên trước đây file sai định dạng/quá dung lượng vẫn
+     * bị client coi là upload thành công. Trả kèm thông tin media để modal
+     * picker tự chọn file vừa upload vào field đã mở modal.
+     */
     public function storeAjax(Request $request, MediaUploader $mediaUploader){
-//        try {
-//            DB::beginTransaction();
-            if ($files = $request->file('image-upload')) {
-                foreach($files as $file) {
-                    $fileArray = array('image' => $file);
-                    $rules = array(
-                        'image' => config('cms.media.validatorImage')
-                    );
-                    $validator = \Validator::make($fileArray, $rules);
-                    if ($validator->fails()) {
-//                        DB::rollBack();
-                        return redirect()->back()->with('errors', $validator->errors()->getMessages());
-                    } else {
-                        $media = $mediaUploader->setFile($file)->upload();
-                        return [
-                            'id' => $media,
-                        ];
-                    }
-                }
-            }
-//            DB::commit();
-            return true;
-//        } catch(\Exception $exception) {
-//            DB::rollBack();
-//            return false;
-//        }
+        $files = $request->file('image-upload');
+        $file = is_array($files) ? reset($files) : $files;
+
+        if (!$file) {
+            return response()->json(['message' => __('media::media.upload.error')], 422);
+        }
+
+        $validator = \Validator::make(['image' => $file], ['image' => config('cms.media.validatorImage')]);
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first('image')], 422);
+        }
+
+        try {
+            $media = $mediaUploader->setFile($file)->upload();
+        } catch (UnsupportedFileExtensionException $exception) {
+            return response()->json(['message' => __('media::media.upload.unsupported_type')], 422);
+        } catch (SuspiciousContentException $exception) {
+            return response()->json(['message' => __('media::media.upload.error')], 422);
+        }
+
+        $isImage = $media->isOfType('image');
+
+        return response()->json([
+            'status' => 'C200',
+            'id' => $media->id,
+            // Cùng định dạng với data-src/data-type/data-ext của form/result.blade.php
+            'media' => [
+                'id' => $media->id,
+                'name' => $media->name,
+                'src' => $isImage ? Img::url($media->getUrl(), 300, 300) : '',
+                'type' => $isImage ? 'image' : 'other',
+                'ext' => strtoupper($media->extension),
+            ],
+        ]);
     }
 }

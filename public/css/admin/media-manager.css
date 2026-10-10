@@ -21,39 +21,77 @@
 /* ---------------------------------------------------------------- */
 /* Kéo-thả file lên toàn bộ card                                     */
 /* ---------------------------------------------------------------- */
+/*
+ * Overlay fade+scale vào thay vì bật/tắt đột ngột qua display:none (không
+ * transition được), kèm viền nhấp nháy dạng "ripple" và icon nảy nhẹ để nhấn
+ * mạnh rõ đang ở trạng thái thả file. Tông xám tối thay vì xanh primary để
+ * không trộn lẫn với các trạng thái "is-active" màu xanh khác trên trang
+ * (filter đang chọn, nút đang bật...) — overlay toàn màn hình cần tách biệt
+ * rõ, không phải thêm 1 chỉ dấu "đang chọn" như các phần tử khác.
+ */
 .media-drop-overlay {
     position: absolute;
     inset: 0;
     z-index: 30;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 123, 255, .06);
-    border: 2px dashed #007bff;
+    background: rgba(53, 60, 78, .65);
+    border: 3px dashed #353c4e;
     border-radius: 6px;
     pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(.97);
+    transition: opacity .18s ease, transform .18s ease, visibility 0s linear .18s;
 }
 
 .media-app.is-drag-over .media-drop-overlay {
-    display: flex;
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+    transition: opacity .18s ease, transform .18s ease, visibility 0s linear 0s;
+    animation: media-drop-pulse 1.6s ease-out infinite;
+}
+
+@keyframes media-drop-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(53, 60, 78, .3);
+    }
+    70% {
+        box-shadow: 0 0 0 14px rgba(53, 60, 78, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(53, 60, 78, 0);
+    }
 }
 
 .media-drop-overlay__inner {
     text-align: center;
-    color: #007bff;
+    color: #fff;
     font-weight: 700;
 }
 
 .media-drop-overlay__inner i {
-    font-size: 28px;
+    font-size: 32px;
     margin-bottom: 8px;
     display: block;
+    animation: media-drop-bounce 1s ease-in-out infinite;
+}
+
+@keyframes media-drop-bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-6px);
+    }
 }
 
 .media-drop-overlay__hint {
     font-size: 12px;
     font-weight: 500;
-    color: #5b9df2;
+    color: #d7dbe3;
     margin-top: 4px;
 }
 
@@ -415,6 +453,10 @@
 }
 
 .media-upload-item__bar-fill {
+    /* Là <span> (inline mặc định) — CSS width không có tác dụng trên phần tử
+       inline, nên set width qua JS (xhr.upload.onprogress) trước giờ không
+       thấy chạy. display:block để width thực sự áp dụng được. */
+    display: block;
     height: 100%;
     width: 0;
     background: #007bff;
