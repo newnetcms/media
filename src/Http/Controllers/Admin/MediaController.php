@@ -7,10 +7,12 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
+use Newnet\Media\Exceptions\RemoteImageException;
 use Newnet\Media\Exceptions\SuspiciousContentException;
 use Newnet\Media\Exceptions\UnsupportedFileExtensionException;
 use Newnet\Media\Facades\Img;
 use Newnet\Media\MediaUploader;
+use Newnet\Media\RemoteImageImporter;
 use Newnet\Media\Models\Media;
 use Newnet\Media\Models\Mediable;
 use Newnet\Media\Repositories\MediableRepositoryInterace;
@@ -655,9 +657,39 @@ class MediaController extends Controller
             return response()->json(['message' => __('media::media.upload.error')], 422);
         }
 
+        return response()->json($this->uploadedMediaPayload($media));
+    }
+
+    /**
+     * Tải ảnh từ URL bên ngoài vào thư viện (TinyMCE tự gọi khi dán nội dung copy
+     * từ website khác có ảnh), trả cùng định dạng với storeAjax(). Chặn SSRF/giới
+     * hạn dung lượng nằm trong RemoteImageImporter.
+     */
+    public function importUrl(Request $request, RemoteImageImporter $importer)
+    {
+        $url = trim((string) $request->input('url'));
+        if ($url === '' || strlen($url) > 2048) {
+            return response()->json(['message' => __('media::media.import.invalid_url')], 422);
+        }
+
+        try {
+            $media = $importer->import($url);
+        } catch (RemoteImageException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        } catch (UnsupportedFileExtensionException $exception) {
+            return response()->json(['message' => __('media::media.upload.unsupported_type')], 422);
+        } catch (SuspiciousContentException $exception) {
+            return response()->json(['message' => __('media::media.upload.error')], 422);
+        }
+
+        return response()->json($this->uploadedMediaPayload($media));
+    }
+
+    protected function uploadedMediaPayload(Media $media): array
+    {
         $isImage = $media->isOfType('image');
 
-        return response()->json([
+        return [
             'status' => 'C200',
             'id' => $media->id,
             // Cùng định dạng với data-src/data-type/data-ext của form/result.blade.php
@@ -671,6 +703,6 @@ class MediaController extends Controller
                 'url' => $media->getUrl(),
                 'kind' => $media->insertableKind(),
             ],
-        ]);
+        ];
     }
 }

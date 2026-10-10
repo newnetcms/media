@@ -86,6 +86,16 @@ return [
         'uploading_many' => 'Đang tải lên :count file',
     ],
 
+    // Tải ảnh từ website khác về thư viện khi dán nội dung vào TinyMCE
+    'import' => [
+        'invalid_url' => 'URL ảnh không hợp lệ hoặc không được phép tải',
+        'download_failed' => 'Không tải được ảnh từ URL này',
+        'not_image' => 'URL này không phải là ảnh',
+        'too_large' => 'Ảnh vượt quá dung lượng cho phép (:max)',
+        'importing' => 'Đang tải :count ảnh về thư viện media',
+        'failed' => 'Không tải được :count ảnh về thư viện, đang giữ link gốc:',
+    ],
+
     'bulk' => [
         'selected' => 'Đã chọn :count mục',
         'delete' => 'Xoá',

@@ -86,6 +86,16 @@ return [
         'uploading_many' => 'Uploading :count files',
     ],
 
+    // Importing images from other websites when pasting into TinyMCE
+    'import' => [
+        'invalid_url' => 'The image URL is invalid or not allowed',
+        'download_failed' => 'Could not download the image from this URL',
+        'not_image' => 'This URL is not an image',
+        'too_large' => 'The image exceeds the allowed size (:max)',
+        'importing' => 'Importing :count image(s) into the media library',
+        'failed' => 'Could not import :count image(s); keeping the original links:',
+    ],
+
     'bulk' => [
         'selected' => ':count item(s) selected',
         'delete' => 'Delete',

@@ -33,4 +33,7 @@ Route::prefix('media')->group(function () {
         ->name('media.admin.media.ajaxMedia');
     Route::post('/store-ajax', [MediaController::class, 'storeAjax'])
         ->name('media.admin.media.storeAjax');
+    // TinyMCE: dán nội dung từ website khác có ảnh → tải ảnh đó về thư viện media
+    Route::post('/import-url', [MediaController::class, 'importUrl'])
+        ->name('media.admin.media.importUrl');
 });
