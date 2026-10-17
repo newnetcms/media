@@ -58,6 +58,10 @@ return [
         'title' => 'File manager',
         'image_required' => 'Please choose an image file',
         'media_required' => 'Please choose a video or audio file',
+        // Gallery mode: pick several files, then Save once
+        'gallery_hint' => 'Click to select multiple files, click again to deselect',
+        'selected_count' => ':count file(s) selected',
+        'clear_selection' => 'Clear',
     ],
 
     'list' => [

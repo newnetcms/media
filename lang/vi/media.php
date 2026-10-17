@@ -58,6 +58,10 @@ return [
         'title' => 'Quản lý tệp',
         'image_required' => 'Vui lòng chọn file ảnh',
         'media_required' => 'Vui lòng chọn file video hoặc âm thanh',
+        // Chế độ gallery: chọn nhiều file rồi Lưu một lần
+        'gallery_hint' => 'Bấm để chọn nhiều file, bấm lần nữa để bỏ chọn',
+        'selected_count' => 'Đã chọn :count file',
+        'clear_selection' => 'Bỏ chọn',
     ],
 
     'list' => [

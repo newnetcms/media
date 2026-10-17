@@ -849,6 +849,33 @@
             padding: 14px 22px;
         }
 
+        /* Chế độ gallery: số đã chọn + bỏ chọn nằm bên trái, nút Lưu bên phải */
+        .modal-media-file-{{$name}} .media-picker__selection {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-right: auto;
+            font-size: 13px;
+            color: #8a93a6;
+        }
+
+        .modal-media-file-{{$name}} .media-picker__selection strong {
+            color: #353c4e;
+        }
+
+        .modal-media-file-{{$name}} .media-picker__selection a {
+            color: #007bff;
+            font-weight: 600;
+        }
+
+        /* Chế độ gallery: dấu check hiện số thứ tự sẽ thêm vào gallery */
+        .modal-media-file-{{$name}} .media-picker-item__check[data-order] {
+            width: 22px;
+            height: 22px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
         .modal-media-file-{{$name}} .js-save-img-media-{{$name}},
         .modal-media-file-{{$name}} .js-save-gallery-media-{{$name}} {
             background: #007bff;
@@ -958,6 +985,11 @@
             </div>
             <div class="modal-footer media-picker__footer">
                 @if(isset($media_type) && $media_type == 'gallery')
+                    <div class="media-picker__selection">
+                        <span class="js-gallery-hint-{{$name}}">{{ __('media::media.picker.gallery_hint') }}</span>
+                        <strong class="js-gallery-count-{{$name}}" style="display: none"></strong>
+                        <a href="#" class="js-gallery-clear-{{$name}}" style="display: none">{{ __('media::media.picker.clear_selection') }}</a>
+                    </div>
                     <button class="btn btn-success js-save-gallery-media-{{$name}}" type="button">{{ __('media::media.detail.save') }}</button>
                 @else
                     <button class="btn btn-success js-save-img-media-{{$name}}" type="button">{{ __('media::media.detail.save') }}</button>
@@ -982,6 +1014,7 @@
             'imageRequired' => __('media::media.picker.image_required'),
             'mediaRequired' => __('media::media.picker.media_required'),
         ];
+        $pickerSelectedCountMessage = __('media::media.picker.selected_count');
     @endphp
     <script>
         $(document).ready(function () {
@@ -1003,6 +1036,9 @@
             let dataUrl = null
             let dataName = null
             let dataKind = null
+            // media_type=gallery: các file đang chọn trong modal, theo thứ tự bấm
+            // (cũng là thứ tự được thêm vào gallery khi Lưu) — {id, src, type, ext, ...}
+            let gallerySelection = []
 
             // Mirrors lib/media/resources/views/form/partials/file-type-icon.blade.php - keep the two in sync
             function fileIconClass(ext) {
@@ -1059,6 +1095,7 @@
                         }
                         currentHasMore = !!res.hasMore
                         paginate = 1
+                        markGallerySelection()
                         maybeFillViewport()
                     },
                     error: function (err) {
@@ -1079,6 +1116,7 @@
                     success: function (res) {
                         $('.js-modal-html-{{$name}}').append(res.result)
                         currentHasMore = !!res.hasMore
+                        markGallerySelection()
                     },
                     error: function (err) {
 
@@ -1349,7 +1387,14 @@
 
                 if (uploaded.length) {
                     if (isGalleryMode) {
-                        uploaded.forEach(appendGalleryItem)
+                        // File vừa upload được thêm sau các file đang chọn trong thư viện
+                        uploaded.forEach(function (media) {
+                            media.id = String(media.id)
+                            if (gallerySelectionIndex(media.id) === -1) {
+                                gallerySelection.push(media)
+                            }
+                        })
+                        commitGallerySelection()
                     } else {
                         applySingleSelection(uploaded[0])
                     }
@@ -1458,6 +1503,11 @@
             // document nên 1 trang có nhiều picker (vd field ảnh + picker của
             // TinyMCE) thì bấm chọn ở modal này cũng ghi đè lựa chọn của modal kia.
             $('.js-modal-html-{{$name}}').on('click', '.editImageSelected', function () {
+                if (isGalleryMode) {
+                    toggleGallerySelection(mediaFromItem($(this)))
+                    return
+                }
+
                 $('.js-modal-html-{{$name}} .editImageSelected').removeClass('active-img')
                 $(this).addClass('active-img')
                 dataId = $(this).attr('data-id');
@@ -1557,12 +1607,101 @@
             })
 
             $('.js-save-gallery-media-{{$name}}').click(function () {
-                var media = selectedMedia()
-                if (media) {
-                    appendGalleryItem(media)
-                }
+                commitGallerySelection()
                 $('.modal-media-file-{{$name}}').modal('hide');
             })
+
+            function mediaFromItem($item) {
+                return {
+                    id: String($item.attr('data-id')),
+                    src: $item.attr('data-src'),
+                    type: $item.attr('data-type'),
+                    ext: $item.attr('data-ext'),
+                    url: $item.attr('data-url'),
+                    name: $item.attr('data-name'),
+                    kind: $item.attr('data-kind')
+                }
+            }
+
+            function gallerySelectionIndex(id) {
+                for (var i = 0; i < gallerySelection.length; i++) {
+                    if (gallerySelection[i].id === String(id)) {
+                        return i
+                    }
+                }
+                return -1
+            }
+
+            function toggleGallerySelection(media) {
+                var index = gallerySelectionIndex(media.id)
+                if (index > -1) {
+                    gallerySelection.splice(index, 1)
+                } else {
+                    gallerySelection.push(media)
+                }
+                markGallerySelection()
+            }
+
+            // Đánh dấu lại các file đang chọn (kèm số thứ tự) — gọi sau mỗi lần
+            // danh sách render lại qua AJAX (lọc, tìm, cuộn tải thêm) vì .html()/
+            // .append() tạo phần tử mới, mất class active-img.
+            function markGallerySelection() {
+                if (!isGalleryMode) {
+                    return
+                }
+
+                $('.js-modal-html-{{$name}} .editImageSelected').each(function () {
+                    var index = gallerySelectionIndex($(this).attr('data-id'))
+                    var $check = $(this).find('.media-picker-item__check')
+                    $(this).toggleClass('active-img', index > -1)
+                    if (index > -1) {
+                        $check.attr('data-order', index + 1).text(index + 1)
+                    } else if ($check.attr('data-order')) {
+                        $check.removeAttr('data-order').html('<i class="fas fa-check"></i>')
+                    }
+                })
+
+                var count = gallerySelection.length
+                $('.js-gallery-hint-{{$name}}').toggle(count === 0)
+                $('.js-gallery-count-{{$name}}').toggle(count > 0)
+                    .text(@json($pickerSelectedCountMessage).replace(':count', count))
+                $('.js-gallery-clear-{{$name}}').toggle(count > 0)
+            }
+
+            // Thêm các file đã chọn vào cuối gallery theo thứ tự bấm, bỏ qua file
+            // đã có sẵn trong gallery để không bị trùng.
+            function commitGallerySelection() {
+                var existing = $('.gallery-list-{{$name}} input[name="{{ $name }}[]"]').map(function () {
+                    return String($(this).val())
+                }).get()
+
+                gallerySelection.forEach(function (media) {
+                    if (existing.indexOf(media.id) === -1) {
+                        appendGalleryItem(media)
+                        existing.push(media.id)
+                    }
+                })
+
+                gallerySelection = []
+                markGallerySelection()
+            }
+
+            if (isGalleryMode) {
+                $('.js-gallery-clear-{{$name}}').click(function (e) {
+                    e.preventDefault()
+                    gallerySelection = []
+                    markGallerySelection()
+                })
+
+                // Mỗi lần mở modal bắt đầu với lựa chọn trống (đóng modal không
+                // Lưu thì bỏ các file đã bấm chọn ở lần trước).
+                $('.modal-media-file-{{$name}}').on('show.bs.modal', function (e) {
+                    if (e.target === this) {
+                        gallerySelection = []
+                        markGallerySelection()
+                    }
+                })
+            }
 
             if (isEditorMode) {
                 // Đưa modal ra thẳng <body>: tránh bị kẹt trong stacking context của
