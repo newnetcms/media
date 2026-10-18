@@ -292,7 +292,9 @@ class MediaUploader
      *   trước signature của nó (khác hẳn cách chặn theo danh sách mẫu, vốn luôn có thể bị né).
      * - SVG: không rasterize được (là vector/XML), nên chỉ lọc bỏ <script>, thuộc tính on*=, và
      *   href="javascript:..." — các vector XSS nằm NGAY TRONG cú pháp SVG hợp lệ, không phải lỗi.
-     * - Loại còn lại (pdf, zip, doc, mp4...): không tái cấu trúc được an toàn bằng code ở đây, nên
+     * - PDF: quét theo cú pháp PDF (xem rejectIfPdfContainsScript) thay vì bộ mẫu chung, vì bộ mẫu
+     *   chung chặn nhầm rất nhiều PDF hợp lệ.
+     * - Loại còn lại (zip, doc, mp4...): không tái cấu trúc được an toàn bằng code ở đây, nên
      *   chỉ quét chữ ký script/exec phổ biến và từ chối thẳng nếu khớp (chặn được các mẫu đã biết,
      *   không chắc chặn được biến thể hoàn toàn mới — yếu hơn 2 nhánh trên).
      */
@@ -309,6 +311,8 @@ class MediaUploader
             }
         } elseif ($ext === 'svg') {
             $this->sanitizeSvg();
+        } elseif ($ext === 'pdf') {
+            $this->rejectIfPdfContainsScript();
         } else {
             $this->rejectIfContainsPayload();
         }
@@ -398,6 +402,68 @@ class MediaUploader
             if (preg_match($pattern, $content)) {
                 throw new SuspiciousContentException();
             }
+        }
+    }
+
+    /**
+     * PDF không dùng bộ mẫu của rejectIfContainsPayload() vì bộ mẫu đó chặn nhầm nhiều PDF hợp lệ:
+     * - /OpenAction tự nó vô hại (lệnh "mở ở trang X" mà Acrobat Distiller/InDesign hay ghi vào
+     *   Catalog); nguy hiểm chỉ là action JavaScript nó trỏ tới, mà action đó đã bị bắt bởi mẫu
+     *   /JavaScript, /JS bên dưới.
+     * - "/JS" đứng trần rất dễ trùng ngẫu nhiên trong dữ liệu base64 (thumbnail XMP của file
+     *   Illustrator/InDesign), nên chỉ chặn khi là khoá PDF thật: theo sau là chuỗi "(", chuỗi hex
+     *   "<" hoặc tham chiếu "12 0 R".
+     * - Mẫu eval(/system(/on*= dễ khớp chữ trong nội dung sách lập trình mà không chạy được từ PDF.
+     * Chỉ chặn những gì chạy được code: action JavaScript, /Launch (mở chương trình ngoài), cùng
+     * polyglot HTML/PHP rõ ràng. Quét TOÀN file theo từng khối 1MB có chồng lấn (không chỉ 2MB đầu)
+     * vì Catalog và action thường nằm cuối file. Tên PDF được phép viết dạng #xx (vd /J#61vaScript)
+     * để né quét, nên giải mã #xx trước khi so khớp. Hạn chế còn lại: action nằm trong object stream
+     * nén (PDF 1.5+) thì không thấy được — đây vẫn là quét chữ ký, không phải phân tích PDF đầy đủ.
+     */
+    protected function rejectIfPdfContainsScript()
+    {
+        $handle = @fopen($this->file->getPathname(), 'rb');
+
+        if ($handle === false) {
+            return;
+        }
+
+        $patterns = [
+            '/<\?php\b/i',
+            '/<script[\s>]/i',
+            '/javascript\s*:/i',
+            '#/JavaScript(?![A-Za-z0-9])#',
+            '#/JS\s*(?:\(|<|\d+\s+\d+\s+R\b)#',
+            '#/Launch(?![A-Za-z0-9])#',
+        ];
+
+        // Đủ dài để một mẫu nằm vắt qua ranh giới 2 khối vẫn khớp ở khối sau
+        $overlap = 256;
+        $tail = '';
+
+        try {
+            while (!feof($handle)) {
+                $chunk = fread($handle, 1024 * 1024);
+
+                if ($chunk === false || $chunk === '') {
+                    break;
+                }
+
+                $buffer = $tail.$chunk;
+                $decoded = preg_replace_callback('/#([0-9A-Fa-f]{2})/', function ($matches) {
+                    return chr(hexdec($matches[1]));
+                }, $buffer) ?? $buffer;
+
+                foreach ($patterns as $pattern) {
+                    if (preg_match($pattern, $decoded)) {
+                        throw new SuspiciousContentException();
+                    }
+                }
+
+                $tail = substr($buffer, -$overlap);
+            }
+        } finally {
+            fclose($handle);
         }
     }
 
