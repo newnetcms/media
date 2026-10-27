@@ -28,7 +28,7 @@ class CropImageController extends Controller
     {
         $file = base64_decode($file_path);
 
-        if ($this->detectInternalImage($file)) {
+        if ($this->isSafePath($file_name) && $this->detectInternalImage($file)) {
             $cropedPath = $this->getWebpPath($size, $file_path, $file_name);
 
             list($width, $height) = $this->getImageSizeOptions($size);
@@ -40,6 +40,23 @@ class CropImageController extends Controller
             ->withHeaders([
                 'Content-Type' => 'image/webp'
             ]);
+    }
+
+    /**
+     * $file/$file_name đến trực tiếp từ URL công khai, không qua xác thực nào.
+     * Chặn ".." và đường dẫn tuyệt đối để request không thể đọc/viết ra ngoài
+     * thư mục public (path traversal - CWE-22), vì $size (đã bị route ->where()
+     * giới hạn ký tự) không đủ để chặn việc này khi $file/$file_name còn mở.
+     */
+    protected function isSafePath($path): bool
+    {
+        if (!is_string($path) || $path === '' || str_contains($path, "\0")) {
+            return false;
+        }
+
+        $normalized = str_replace('\\', '/', $path);
+
+        return $normalized[0] !== '/' && !preg_match('#(^|/)\.\.(/|$)#', $normalized);
     }
 
     protected function getWebpPath($size, $file_path, $file_name): string
@@ -68,7 +85,7 @@ class CropImageController extends Controller
 
     protected function detectInternalImage($file): bool
     {
-        return File::exists($file);
+        return $this->isSafePath($file) && File::exists($file);
     }
 
     protected function getImageSizeOptions($size): array
